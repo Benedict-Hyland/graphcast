@@ -118,7 +118,7 @@ class GFSDataProcessor:
 
         # Create an empty list to store the extracted datasets
         extracted_datasets = []
-
+        print("Start extracting variables and associated levels from grib2 files:")
         # Loop through each folder (e.g., gdas.yyyymmdd)
         date_folders = sorted(next(os.walk(data_directory))[1])
         for date_folder in date_folders:
@@ -167,9 +167,11 @@ class GFSDataProcessor:
 
                                 # Optionally, remove the intermediate GRIB2 file
                                 os.remove(output_file)
-
+        print("Merging grib2 files:")
         ds = xr.merge(extracted_datasets)
-
+        print("Merging completed.")
+        
+        print("Processing, Renaming and Reshaping the data:")
         # Drop the 'level' dimension
         ds = ds.drop_dims('level')
 
@@ -229,7 +231,7 @@ class GFSDataProcessor:
         if not self.keep_downloaded_data:
             self.remove_downloaded_data()
 
-        print("Processing completed.")  # Print a message indicating processing is done
+        print("Processing completed.")
 
     def remove_downloaded_data(self):
         # Remove downloaded data from the specified directory
