@@ -1,4 +1,4 @@
-# NCEP GDAS Data Processing Utility
+# NCEP GDAS Data Processing Utility to Provide GraphCast Inputs
 
 The NCEP GDAS Data Processing Utility is a Python script designed to download Global Data Assimilation System (GDAS) data from the National Centers for Environmental Prediction (NCEP) S3 bucket, and prepare the data in a format suitable for input into the GraphCast weather prediction system.
 
@@ -8,7 +8,6 @@ The NCEP GDAS Data Processing Utility is a Python script designed to download Gl
 - [Usage](#usage)
 - [Options](#options)
 - [Output](#output)
-- [License](#license)
 
 ## Overview
 
