@@ -52,7 +52,7 @@ The utility supports the following optional command-line arguments:
 
 Example usage with options:
 
-    `python utility.py 2023060600 2023060712 -o /path/to/output -d /path/to/download -k no`
+   `python utility.py 2023060600 2023060712 -o /path/to/output -d /path/to/download -k no`
 
 
 ## Output
