@@ -17,7 +17,7 @@ The National Centers for Environmental Prediction (NCEP) provides GDAS data that
 
 Before using this utility, ensure you have the following prerequisites installed:
 - Python 3.x
-- Required Python packages (install using `pip install -r requirements.txt`):
+- Required Python packages:
   - `xarray`
   - `boto3`
 
