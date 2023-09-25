@@ -30,8 +30,9 @@ To use the utility, follow these steps:
 
 1. Clone this repository:
    
-   `git clone https://github.com/yourusername/nc-gdas-processing.git`
-   `cd nc-gdas-processing`
+   `git clone https://github.com/SadeghTabas-NOAA/graphcast.git`
+   
+   `cd graphcast/NCEP`
 
 3. Run the script with the desired start and end datetime (in "YYYYMMDDHH" format) as arguments:
 
