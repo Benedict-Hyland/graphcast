@@ -169,7 +169,7 @@ class GFSDataProcessor:
                                 os.remove(output_file)
         print("Merging grib2 files:")
         ds = xr.merge(extracted_datasets)
-        print("Merging completed.")
+        print("Merging process completed.")
         
         print("Processing, Renaming and Reshaping the data:")
         # Drop the 'level' dimension
