@@ -26,9 +26,9 @@ class GFSDataProcessor:
 
         # Specify the local directory where you want to save the files
         if self.download_directory is None:
-            self.local_base_directory = os.path.join(os.getcwd(), 'data')  # Use current directory if not specified
+            self.local_base_directory = os.path.join(os.getcwd(), 'noaa-gfs-bdp-pds-data')  # Use current directory if not specified
         else:
-            self.local_base_directory = os.path.join(self.download_directory, 'data')
+            self.local_base_directory = os.path.join(self.download_directory, 'noaa-gfs-bdp-pds-data')
 
         # List of file formats to download
         self.file_formats = ['0p25.f000', '0p25.f001', '0p25.f006']
