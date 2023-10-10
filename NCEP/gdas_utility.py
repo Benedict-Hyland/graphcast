@@ -1,3 +1,9 @@
+'''
+Description:
+@uthor: Sadegh Sadeghi Tabas (sadegh.tabas@noaa.gov)
+Revision history:
+    -20231010: Sadegh Tabas, initial code
+'''
 import os
 import sys
 import boto3
