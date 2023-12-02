@@ -221,6 +221,10 @@ class GFSDataProcessor:
         ds['geopotential_at_surface'] = ds['geopotential_at_surface'].squeeze('batch')
         ds['land_sea_mask'] = ds['land_sea_mask'].squeeze('batch')
 
+        # Update geopotential unit to m2/s2 by multiplying 9.80665
+        ds['geopotential_at_surface'] = ds['geopotential_at_surface'] * 9.80665
+        ds['geopotential'] = ds['geopotential'] * 9.80665
+
         # Define the output NetCDF file
         date = date_folders[0]
         steps = str(len(ds['time']))
