@@ -38,7 +38,7 @@ class GFSDataProcessor:
             self.local_base_directory = os.path.join(self.download_directory, 'noaa-gfs-bdp-pds-data')
 
         # List of file formats to download
-        self.file_formats = ['0p25.f000', '0p25.f001', '0p25.f006']
+        self.file_formats = ['0p25.f000', '0p25.f006'] # , '0p25.f001'
 
     def download_data(self):
         # Calculate the number of 6-hour intervals
