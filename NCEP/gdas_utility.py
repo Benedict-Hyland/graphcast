@@ -199,7 +199,7 @@ class GFSDataProcessor:
             'UGRD_10maboveground': '10m_u_component_of_wind',
             'VGRD_10maboveground': '10m_v_component_of_wind',
             'APCP_surface': 'total_precipitation_6hr',
-            'USWRF_topofatmosphere': 'toa_incident_solar_radiation',
+            #'USWRF_topofatmosphere': 'toa_incident_solar_radiation',
             'HGT': 'geopotential',
             'TMP': 'temperature',
             'SPFH': 'specific_humidity',
