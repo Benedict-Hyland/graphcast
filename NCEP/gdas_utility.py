@@ -231,8 +231,8 @@ class GFSDataProcessor:
         ds['geopotential_at_surface'] = ds['geopotential_at_surface'] * 9.80665
         ds['geopotential'] = ds['geopotential'] * 9.80665
 
-        # Update total_precipitation_6hr unit to (m) from (kg/m^2) by dividing it by 1000kg/m³×9.81m/s²
-        ds['total_precipitation_6hr'] = ds['total_precipitation_6hr'] / 9806.65
+        # Update total_precipitation_6hr unit to (m) from (kg/m^2) by dividing it by 1000kg/m³
+        ds['total_precipitation_6hr'] = ds['total_precipitation_6hr'] / 1000
         
         # Define the output NetCDF file
         date = date_folders[0]
