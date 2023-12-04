@@ -158,8 +158,8 @@ class GFSDataProcessor:
 
                                 if variable == '^(597):':
                                     ds['time'] = ds['time'] - np.timedelta64(6, 'h')
-                                elif variable == ':USWRF:':
-                                    ds['time'] = ds['time'] - np.timedelta64(1, 'h')
+                                #elif variable == ':USWRF:':
+                                #    ds['time'] = ds['time'] - np.timedelta64(1, 'h')
 
                                 # If specified, extract only the first time step
                                 if variable not in [':LAND:', ':HGT:']:
