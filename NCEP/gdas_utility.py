@@ -15,6 +15,8 @@ from datetime import datetime, timedelta
 from botocore.config import Config
 from botocore import UNSIGNED
 import argparse
+from pysolar.util import extraterrestrial_irrad
+
 
 class GFSDataProcessor:
     def __init__(self, start_datetime, end_datetime, output_directory=None, download_directory=None, keep_downloaded_data=True):
