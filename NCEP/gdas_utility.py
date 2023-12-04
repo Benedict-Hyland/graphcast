@@ -163,18 +163,23 @@ class GFSDataProcessor:
                                 # If specified, extract only the first time step
                                 if variable not in [':LAND:', ':HGT:']:
                                     # Append the dataset to the list
-                                    extracted_datasets.append(ds)
+                                    extracted_datasets.append(output_file)
                                 else:
                                     if first_time_step_only:
                                         # Append the dataset to the list
                                         ds = ds.isel(time=0)
-                                        extracted_datasets.append(ds)
+                                        extracted_datasets.append(output_file)
                                         variables_to_extract[file_extension][variable]['first_time_step_only'] = False
-
+                                ds.to_netcdf(output_file)
                                 # Optionally, remove the intermediate GRIB2 file
-                                os.remove(output_file)
+                                # os.remove(output_file)
         print("Merging grib2 files:")
-        ds = xr.merge(extracted_datasets)
+        ds = xr.open_dataset(extracted_datasets[0])
+        for file in extracted_datasets[1:]:
+            currDS = xr.open_dataset(file)
+            ds = xr.merge([ds, currDS])
+            
+            os.remove(file)
         print("Merging process completed.")
         
         print("Processing, Renaming and Reshaping the data:")
