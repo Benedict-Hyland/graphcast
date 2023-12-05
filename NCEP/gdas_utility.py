@@ -314,5 +314,5 @@ if __name__ == "__main__":
     keep_downloaded_data = args.keep.lower() == "yes"
 
     data_processor = GFSDataProcessor(start_datetime, end_datetime, output_directory, download_directory, keep_downloaded_data)
-    #data_processor.download_data()
+    data_processor.download_data()
     data_processor.process_data()
