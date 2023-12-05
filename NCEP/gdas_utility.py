@@ -3,6 +3,7 @@ Description
 @uthor: Sadegh Sadeghi Tabas (sadegh.tabas@noaa.gov)
 Revision history:
     -20231010: Sadegh Tabas, initial code
+    -20231204: Sadegh Tabas, calculating toa incident solar radiation, parallelizing, updating units, and resolving memory issues
 '''
 import os
 import sys
@@ -14,6 +15,11 @@ from datetime import datetime, timedelta
 from botocore.config import Config
 from botocore import UNSIGNED
 import argparse
+from pysolar.util import extraterrestrial_irrad
+from joblib import Parallel, delayed
+import pytz
+
+
 
 class GFSDataProcessor:
     def __init__(self, start_datetime, end_datetime, output_directory=None, download_directory=None, keep_downloaded_data=True):
@@ -37,7 +43,7 @@ class GFSDataProcessor:
             self.local_base_directory = os.path.join(self.download_directory, 'noaa-gfs-bdp-pds-data')
 
         # List of file formats to download
-        self.file_formats = ['0p25.f000', '0p25.f001', '0p25.f006']
+        self.file_formats = ['0p25.f000', '0p25.f006'] # , '0p25.f001'
 
     def download_data(self):
         # Calculate the number of 6-hour intervals
@@ -106,11 +112,11 @@ class GFSDataProcessor:
                     'levels': [':(50|100|150|200|250|300|400|500|600|700|850|925|1000) mb:'],
                 },
             },
-            '.f001': {
-                ':USWRF:': {
-                    'levels': [':top of atmosphere:'],
-                },
-            },
+            #'.f001': {
+            #    ':USWRF:': {
+            #        'levels': [':top of atmosphere:'],
+            #    },
+            #},
             '.f006': {
                 ':LAND:': {
                     'levels': [':surface:'],
@@ -157,27 +163,38 @@ class GFSDataProcessor:
 
                                 if variable == '^(597):':
                                     ds['time'] = ds['time'] - np.timedelta64(6, 'h')
-                                elif variable == ':USWRF:':
-                                    ds['time'] = ds['time'] - np.timedelta64(1, 'h')
+                                #elif variable == ':USWRF:':
+                                #    ds['time'] = ds['time'] - np.timedelta64(1, 'h')
 
                                 # If specified, extract only the first time step
                                 if variable not in [':LAND:', ':HGT:']:
                                     # Append the dataset to the list
-                                    extracted_datasets.append(ds)
+                                    extracted_datasets.append(output_file)
+                                    ds.to_netcdf(output_file)
                                 else:
                                     if first_time_step_only:
                                         # Append the dataset to the list
                                         ds = ds.isel(time=0)
-                                        extracted_datasets.append(ds)
+                                        extracted_datasets.append(output_file)
                                         variables_to_extract[file_extension][variable]['first_time_step_only'] = False
-
+                                        ds.to_netcdf(output_file)
+                                    else:
+                                        os.remove(output_file)
+                                
+                                
                                 # Optionally, remove the intermediate GRIB2 file
-                                os.remove(output_file)
+                                # os.remove(output_file)
         print("Merging grib2 files:")
-        ds = xr.merge(extracted_datasets)
+        ds = xr.open_dataset(extracted_datasets[0])
+        for file in extracted_datasets[1:]:
+            currDS = xr.open_dataset(file)
+            ds = xr.merge([ds, currDS])
+            
+            os.remove(file)
+        
         print("Merging process completed.")
         
-        print("Processing, Renaming and Reshaping the data:")
+        print("Processing, Renaming and Reshaping the data")
         # Drop the 'level' dimension
         ds = ds.drop_dims('level')
 
@@ -193,7 +210,7 @@ class GFSDataProcessor:
             'UGRD_10maboveground': '10m_u_component_of_wind',
             'VGRD_10maboveground': '10m_v_component_of_wind',
             'APCP_surface': 'total_precipitation_6hr',
-            'USWRF_topofatmosphere': 'toa_incident_solar_radiation',
+            #'USWRF_topofatmosphere': 'toa_incident_solar_radiation',
             'HGT': 'geopotential',
             'TMP': 'temperature',
             'SPFH': 'specific_humidity',
@@ -201,15 +218,35 @@ class GFSDataProcessor:
             'UGRD': 'u_component_of_wind',
             'VGRD': 'v_component_of_wind'
         })
+        print("Calculating toa incident solar radiation using PySolar package")
+        # calc toa incident solar radiation using PySolar package
+        latitude = np.array(ds.lat)
+        longitude = np.array(ds.lon)
+        dates=np.array(ds.time)
+
+        # Function to calculate extraterrestrial solar irradiance for a single combination of lat, lon, and time
+        def calculate_irradiance(lat, lon, datetime):
+            return extraterrestrial_irrad(lat, lon, datetime) * 3600
+        # Parallelize the calculations using joblib
+        tisr = np.array(
+            Parallel(n_jobs=-1)(
+                delayed(calculate_irradiance)(lat, lon, pytz.timezone('UTC').localize(datetime.strptime(str(date), '%Y-%m-%dT%H:%M:%S.%f000')))
+                for date in dates
+                for lat in latitude
+                for lon in longitude
+            )
+        ).reshape(len(dates), len(latitude), len(longitude))
+
+        ds['toa_incident_solar_radiation'] = tuple((['time','lat','lon'], tisr.astype('float32')))
 
         # Assign 'datetime' as coordinates
         ds = ds.assign_coords(datetime=ds.time)
-
+        
         # Convert data types
         ds['lat'] = ds['lat'].astype('float32')
         ds['lon'] = ds['lon'].astype('float32')
         ds['level'] = ds['level'].astype('int32')
-
+        
         # Adjust time values relative to the first time step
         ds['time'] = ds['time'] - ds.time[0]
 
@@ -221,6 +258,16 @@ class GFSDataProcessor:
         ds['geopotential_at_surface'] = ds['geopotential_at_surface'].squeeze('batch')
         ds['land_sea_mask'] = ds['land_sea_mask'].squeeze('batch')
 
+        # Update geopotential unit to m2/s2 by multiplying 9.80665
+        ds['geopotential_at_surface'] = ds['geopotential_at_surface'] * 9.80665
+        ds['geopotential'] = ds['geopotential'] * 9.80665
+
+        # Update total_precipitation_6hr unit to (m) from (kg/m^2) by dividing it by 1000kg/m³
+        ds['total_precipitation_6hr'] = ds['total_precipitation_6hr'] / 1000
+
+        ## Update USWRF (w/m^2), to be used as ERA5 toa_incident_solar_radiation (J/m^2); ( x 3600s)
+        #ds['toa_incident_solar_radiation'] = ds['toa_incident_solar_radiation'] * 3600
+        
         # Define the output NetCDF file
         date = date_folders[0]
         steps = str(len(ds['time']))
@@ -231,6 +278,7 @@ class GFSDataProcessor:
 
         # Save the merged dataset as a NetCDF file
         ds.to_netcdf(output_netcdf)
+        os.remove(extracted_datasets[0])
         print(f"Saved output to {output_netcdf}")
 
         # Optionally, remove downloaded data
