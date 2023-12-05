@@ -191,9 +191,10 @@ class GFSDataProcessor:
             ds = xr.merge([ds, currDS])
             
             os.remove(file)
+        
         print("Merging process completed.")
         
-        print("Processing, Renaming and Reshaping the data:")
+        print("Processing, Renaming and Reshaping the data")
         # Drop the 'level' dimension
         ds = ds.drop_dims('level')
 
@@ -217,7 +218,7 @@ class GFSDataProcessor:
             'UGRD': 'u_component_of_wind',
             'VGRD': 'v_component_of_wind'
         })
-        print("calculating toa incident solar radiation using PySolar package")
+        print("Calculating toa incident solar radiation using PySolar package")
         # calc toa incident solar radiation using PySolar package
         latitude = np.array(ds.lat)
         longitude = np.array(ds.lon)
@@ -277,6 +278,7 @@ class GFSDataProcessor:
 
         # Save the merged dataset as a NetCDF file
         ds.to_netcdf(output_netcdf)
+        os.remove(extracted_datasets[0])
         print(f"Saved output to {output_netcdf}")
 
         # Optionally, remove downloaded data
@@ -312,5 +314,5 @@ if __name__ == "__main__":
     keep_downloaded_data = args.keep.lower() == "yes"
 
     data_processor = GFSDataProcessor(start_datetime, end_datetime, output_directory, download_directory, keep_downloaded_data)
-    data_processor.download_data()
+    #data_processor.download_data()
     data_processor.process_data()
