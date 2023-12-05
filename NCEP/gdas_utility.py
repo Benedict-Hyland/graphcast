@@ -211,15 +211,33 @@ class GFSDataProcessor:
             'UGRD': 'u_component_of_wind',
             'VGRD': 'v_component_of_wind'
         })
+        # calc toa incident solar radiation using PySolar package
+        latitude = np.array(ds.lat)
+        longitude = np.array(ds.lon)
+        dates=np.array(ds.time)[0]
+        # Function to calculate extraterrestrial solar irradiance for a single combination of lat, lon, and time
+        def calculate_irradiance(lat, lon, datetime):
+            return extraterrestrial_irrad(lat, lon, datetime) * 3600
+        # Parallelize the calculations using joblib
+        tisr = np.array(
+            Parallel(n_jobs=-1)(
+                delayed(calculate_irradiance)(lat, lon, pytz.timezone('UTC').localize(datetime.strptime(str(date), '%Y-%m-%dT%H:%M:%S.%f000')))
+                for date in dates
+                for lat in latitude
+                for lon in longitude
+            )
+        ).reshape(len(dates), len(latitude), len(longitude))
+
+        ds['toa_incident_solar_radiation'] = tuple((['time','lat','lon'], tisr.astype('float32')))
 
         # Assign 'datetime' as coordinates
         ds = ds.assign_coords(datetime=ds.time)
-
+        
         # Convert data types
         ds['lat'] = ds['lat'].astype('float32')
         ds['lon'] = ds['lon'].astype('float32')
         ds['level'] = ds['level'].astype('int32')
-
+        
         # Adjust time values relative to the first time step
         ds['time'] = ds['time'] - ds.time[0]
 
