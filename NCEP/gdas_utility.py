@@ -170,13 +170,18 @@ class GFSDataProcessor:
                                 if variable not in [':LAND:', ':HGT:']:
                                     # Append the dataset to the list
                                     extracted_datasets.append(output_file)
+                                    ds.to_netcdf(output_file)
                                 else:
                                     if first_time_step_only:
                                         # Append the dataset to the list
                                         ds = ds.isel(time=0)
                                         extracted_datasets.append(output_file)
                                         variables_to_extract[file_extension][variable]['first_time_step_only'] = False
-                                ds.to_netcdf(output_file)
+                                        ds.to_netcdf(output_file)
+                                    else:
+                                        os.remove(output_file)
+                                
+                                
                                 # Optionally, remove the intermediate GRIB2 file
                                 # os.remove(output_file)
         print("Merging grib2 files:")
@@ -212,11 +217,12 @@ class GFSDataProcessor:
             'UGRD': 'u_component_of_wind',
             'VGRD': 'v_component_of_wind'
         })
-        print("calc toa incident solar radiation using PySolar package")
+        print("calculating toa incident solar radiation using PySolar package")
         # calc toa incident solar radiation using PySolar package
         latitude = np.array(ds.lat)
         longitude = np.array(ds.lon)
-        dates=np.array(ds.time)[0]
+        dates=np.array(ds.time)
+
         # Function to calculate extraterrestrial solar irradiance for a single combination of lat, lon, and time
         def calculate_irradiance(lat, lon, datetime):
             return extraterrestrial_irrad(lat, lon, datetime) * 3600
