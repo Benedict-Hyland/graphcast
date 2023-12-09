@@ -108,7 +108,7 @@ class GFSDataProcessor:
                 ':UGRD:': {
                     'levels': [':10 m above ground:'],
                 },
-                ':SPFH|DZDT|VGRD|UGRD|HGT|TMP:': {
+                ':SPFH|VVEL|VGRD|UGRD|HGT|TMP:': {
                     'levels': [':(50|100|150|200|250|300|400|500|600|700|850|925|1000) mb:'],
                 },
             },
@@ -214,7 +214,7 @@ class GFSDataProcessor:
             'HGT': 'geopotential',
             'TMP': 'temperature',
             'SPFH': 'specific_humidity',
-            'DZDT': 'vertical_velocity',
+            'VVEL': 'vertical_velocity',
             'UGRD': 'u_component_of_wind',
             'VGRD': 'v_component_of_wind'
         })
