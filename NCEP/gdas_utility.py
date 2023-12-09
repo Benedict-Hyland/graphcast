@@ -99,8 +99,8 @@ class GFSDataProcessor:
                 ':TMP:': {
                     'levels': [':2 m above ground:'],
                 },
-                ':PRES:': {
-                    'levels': [':surface:'],
+                ':PRMSL:': {
+                    'levels': [':mean sea level:'],
                 },
                 ':VGRD:': {
                     'levels': [':10 m above ground:'],
@@ -205,7 +205,7 @@ class GFSDataProcessor:
             'plevel': 'level',
             'HGT_surface': 'geopotential_at_surface',
             'LAND_surface': 'land_sea_mask',
-            'PRES_surface': 'mean_sea_level_pressure',
+            'PRMSL_meansealevel': 'mean_sea_level_pressure',
             'TMP_2maboveground': '2m_temperature',
             'UGRD_10maboveground': '10m_u_component_of_wind',
             'VGRD_10maboveground': '10m_v_component_of_wind',
