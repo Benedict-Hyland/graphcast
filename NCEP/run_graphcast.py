@@ -39,3 +39,6 @@ with open("params/GraphCast_operational - ERA5-HRES 1979-2021 - resolution 0.25 
 with open('source-gdas_date-20220101_res-0.25_levels-13_steps-40.nc',"rb") as f:
     current_batch = xarray.load_dataset(f).compute()
 assert current_batch.dims["time"] == 42
+
+# getting inputs, targets (NaN) and forcings using gc.data_utils
+inputs, targets, forcings = data_utils.extract_inputs_targets_forcings(current_batch, target_lead_times=slice("6h", f"{40*6}h"), **dataclasses.asdict(task_config))
