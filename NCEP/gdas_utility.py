@@ -222,8 +222,8 @@ class GFSDataProcessor:
         # calc toa incident solar radiation using PySolar package
         latitude = np.array(ds.lat)
         longitude = np.array(ds.lon)
-        first_step = ds.time[0].values.astype('M8[us]').astype(datetime.datetime)
-        dates = [first_step + datetime.timedelta(hours=i*6) for i in range(42)]
+        first_step = ds.time[0].values.astype('M8[us]').astype(datetime)
+        dates = [first_step + timedelta(hours=i*6) for i in range(42)]
 
         # Function to calculate extraterrestrial solar irradiance for a single combination of lat, lon, and time
         def calculate_irradiance(lat, lon, datetime):
