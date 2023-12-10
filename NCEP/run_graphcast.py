@@ -93,3 +93,6 @@ def drop_state(fn):
 init_jitted = jax.jit(with_configs(run_forward.init))
 
 run_forward_jitted = drop_state(with_params(jax.jit(with_configs(run_forward.apply))))
+
+# calc graphcast forecasts for 40 timesteps (10 days) using rollout func
+predictions = rollout.chunked_prediction(run_forward_jitted, rng=jax.random.PRNGKey(0), inputs=inputs, targets_template=targets * np.nan, forcings=forcings)
