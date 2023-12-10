@@ -237,8 +237,14 @@ class GFSDataProcessor:
                 for lon in longitude
             )
         ).reshape(len(dates), len(latitude), len(longitude))
+        
+        tisr_datetimes = np.array(dates, dtype='datetime64')
+        tisr_data_arr = xr.DataArray(tisr, dims=('time', 'lat', 'lon'),
+                        coords={'time': tisr_datetimes, 'lat': ds.lat, 'lon': ds.lon})
 
-        ds['toa_incident_solar_radiation'] = tuple((['time','lat','lon'], tisr.astype('float32')))
+        # Create an xarray dataset from the DataArray
+        tisr_xarr_dataset = xr.Dataset({'toa_incident_solar_radiation': tisr_data_arr}) 
+        ds = xr.merge([ds,tisr_xarr_dataset])
 
         # Assign 'datetime' as coordinates
         ds = ds.assign_coords(datetime=ds.time)
