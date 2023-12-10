@@ -42,3 +42,12 @@ assert current_batch.dims["time"] == 42
 
 # getting inputs, targets (NaN) and forcings using gc.data_utils
 inputs, targets, forcings = data_utils.extract_inputs_targets_forcings(current_batch, target_lead_times=slice("6h", f"{40*6}h"), **dataclasses.asdict(task_config))
+
+# Load normalization stats
+with open('stats/diffs_stddev_by_level.nc',"rb") as f:
+    diffs_stddev_by_level = xarray.load_dataset(f).compute()
+with open("stats/mean_by_level.nc", "rb") as f:
+    mean_by_level = xarray.load_dataset(f).compute()
+with open("stats/stddev_by_level.nc","rb") as f:
+    stddev_by_level = xarray.load_dataset(f).compute()
+    
