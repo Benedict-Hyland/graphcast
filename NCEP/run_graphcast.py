@@ -26,3 +26,11 @@ from graphcast import normalization
 from graphcast import rollout
 from graphcast import xarray_jax
 from graphcast import xarray_tree
+
+# load pre-trained model
+with open("params/GraphCast_operational - ERA5-HRES 1979-2021 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz", "rb") as f:
+    ckpt = checkpoint.load(f, graphcast.CheckPoint)
+    params = ckpt.params
+    state = {}
+    model_config = ckpt.model_config
+    task_config = ckpt.task_config
