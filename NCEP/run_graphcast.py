@@ -1,12 +1,12 @@
 # import dependencies
 import dataclasses
-import datetime
+# import datetime
 import functools
 import math
 import re
-from typing import Optional
+# from typing import Optional
 # from IPython.display import HTML
-import ipywidgets as widgets
+# import ipywidgets as widgets
 import haiku as hk
 import jax
 # import matplotlib
@@ -14,7 +14,7 @@ import jax
 # from matplotlib import animation
 import numpy as np
 import xarray
-import cartopy.crs as ccrs
+# import cartopy.crs as ccrs
 
 # import graphcast
 from graphcast import autoregressive
@@ -24,8 +24,8 @@ from graphcast import data_utils
 from graphcast import graphcast
 from graphcast import normalization
 from graphcast import rollout
-from graphcast import xarray_jax
-from graphcast import xarray_tree
+# from graphcast import xarray_jax
+# from graphcast import xarray_tree
 
 # load pre-trained model
 with open("params/GraphCast_operational - ERA5-HRES 1979-2021 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz", "rb") as f:
