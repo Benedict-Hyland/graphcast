@@ -222,7 +222,8 @@ class GFSDataProcessor:
         # calc toa incident solar radiation using PySolar package
         latitude = np.array(ds.lat)
         longitude = np.array(ds.lon)
-        dates=np.array(ds.time)
+        first_step = ds.time[0].values.astype('M8[us]').astype(datetime.datetime)
+        dates = [first_step + datetime.timedelta(hours=i*6) for i in range(42)]
 
         # Function to calculate extraterrestrial solar irradiance for a single combination of lat, lon, and time
         def calculate_irradiance(lat, lon, datetime):
@@ -230,7 +231,7 @@ class GFSDataProcessor:
         # Parallelize the calculations using joblib
         tisr = np.array(
             Parallel(n_jobs=-1)(
-                delayed(calculate_irradiance)(lat, lon, pytz.timezone('UTC').localize(datetime.strptime(str(date), '%Y-%m-%dT%H:%M:%S.%f000')))
+                delayed(calculate_irradiance)(lat, lon, pytz.timezone('UTC').localize(date))
                 for date in dates
                 for lat in latitude
                 for lon in longitude
@@ -270,7 +271,7 @@ class GFSDataProcessor:
         
         # Define the output NetCDF file
         date = date_folders[0]
-        steps = str(len(ds['time']))
+        steps = str(len(ds['time'])-2)
 
         if self.output_directory is None:
             self.output_directory = os.getcwd()  # Use current directory if not specified
