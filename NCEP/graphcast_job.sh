@@ -32,3 +32,10 @@ prev_datetime=$( date -d "$time 12 hour ago" "+%Y%m%d%H" )
 
 echo "Current state: $curr_datetime"
 echo "6 hours earlier state: $prev_datetime"
+
+# Set Miniconda path
+export PATH="/contrib/Sadegh.Tabas/miniconda3/bin:$PATH"
+
+# Activate Conda environment
+source /contrib/Sadegh.Tabas/miniconda3/etc/profile.d/conda.sh
+conda activate graphcast
