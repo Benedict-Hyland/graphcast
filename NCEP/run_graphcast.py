@@ -91,10 +91,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     runner = GraphCastRunner()
-    runner.load_pretrained_model("params/GraphCast_operational - ERA5-HRES 1979-2021 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz")
+    runner.load_pretrained_model("/contrib/Sadegh.Tabas/graphcast/NCEP/params/GraphCast_operational - ERA5-HRES 1979-2021 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz")
     runner.load_gdas_data(args.input)
     runner.extract_inputs_targets_forcings()
     runner.load_normalization_stats(
-        "stats/diffs_stddev_by_level.nc", "stats/mean_by_level.nc", "stats/stddev_by_level.nc"
+        "/contrib/Sadegh.Tabas/graphcast/NCEP/stats/diffs_stddev_by_level.nc", 
+        "/contrib/Sadegh.Tabas/graphcast/NCEP/stats/mean_by_level.nc", 
+        "/contrib/Sadegh.Tabas/graphcast/NCEP/stats/stddev_by_level.nc"
     )
     runner.save_predictions(args.output)
