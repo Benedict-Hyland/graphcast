@@ -5,3 +5,10 @@
 #SBATCH --job-name=graphcast
 #SBATCH --output=graphcast_job_output.txt
 #SBATCH --error=graphcast_job_error.txt
+
+
+# load necessary modules
+module use /contrib/spack-stack/envs/ufswm/install/modulefiles/Core/
+module load stack-intel
+module load wgrib2
+module list
