@@ -5,6 +5,7 @@
 #SBATCH --job-name=graphcast
 #SBATCH --output=graphcast_job_output.txt
 #SBATCH --error=graphcast_job_error.txt
+#SBATCH --partition=compute
 
 
 # load necessary modules
