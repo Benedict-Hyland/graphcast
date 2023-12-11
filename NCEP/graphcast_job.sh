@@ -39,3 +39,7 @@ export PATH="/contrib/Sadegh.Tabas/miniconda3/bin:$PATH"
 # Activate Conda environment
 source /contrib/Sadegh.Tabas/miniconda3/etc/profile.d/conda.sh
 conda activate graphcast
+
+echo "start runing gdas utility to generate graphcast inputs for: $curr_datetime"
+# Run the Python script gdas.py with the calculated times
+python3 gdas_utility.py "$prev_datetime" "$curr_datetime" -k no
