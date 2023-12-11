@@ -40,10 +40,24 @@ export PATH="/contrib/Sadegh.Tabas/miniconda3/bin:$PATH"
 source /contrib/Sadegh.Tabas/miniconda3/etc/profile.d/conda.sh
 conda activate graphcast
 
+start_time=$(date +%s)
 echo "start runing gdas utility to generate graphcast inputs for: $curr_datetime"
 # Run the Python script gdas.py with the calculated times
 python3 gdas_utility.py "$prev_datetime" "$curr_datetime" -k no
 
+end_time=$(date +%s)  # Record the end time in seconds since the epoch
+
+# Calculate and print the execution time
+execution_time=$((end_time - start_time))
+echo "Execution time for gdas_utility.py: $execution_time seconds"
+
+start_time=$(date +%s)
 echo "start runing graphcast to get real time 10-days forecasts for: $curr_datetime"
 # Run another Python script
 python3 run_graphcast.py -i source-gdas_date-"$prev_datetime"_res-0.25_levels-13_steps-40.nc -o "$curr_datetime"
+
+end_time=$(date +%s)  # Record the end time in seconds since the epoch
+
+# Calculate and print the execution time
+execution_time=$((end_time - start_time))
+echo "Execution time for graphcast: $execution_time seconds"
