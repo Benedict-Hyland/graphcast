@@ -24,3 +24,8 @@ elif (( $current_hour >= 12 && $current_hour < 18 )); then
 else
     datetime=$(date -u -d 'today 18:00')
 fi
+
+# Calculate time 6 hours before
+#curr_datetime=$(date -u -d "$time" +'%Y%m%d%H')
+curr_datetime=$( date -d "$time 6 hour ago" "+%Y%m%d%H" )
+prev_datetime=$( date -d "$time 12 hour ago" "+%Y%m%d%H" )
