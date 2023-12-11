@@ -27,8 +27,8 @@ fi
 
 # Calculate time 6 hours before
 #curr_datetime=$(date -u -d "$time" +'%Y%m%d%H')
-curr_datetime=$( date -d "$time 6 hour ago" "+%Y%m%d%H" )
-prev_datetime=$( date -d "$time 12 hour ago" "+%Y%m%d%H" )
+curr_datetime=$( date -d "$time 12 hour ago" "+%Y%m%d%H" )
+prev_datetime=$( date -d "$time 18 hour ago" "+%Y%m%d%H" )
 
 echo "Current state: $curr_datetime"
 echo "6 hours earlier state: $prev_datetime"
