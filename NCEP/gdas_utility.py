@@ -240,8 +240,7 @@ class GFSDataProcessor:
         
         tisr_datetimes = np.array(dates, dtype='datetime64')
         tisr_data_arr = xr.DataArray(tisr, dims=('time', 'lat', 'lon'),
-                        coords={'time': tisr_datetimes, 'lat': ds.lat, 'lon': ds.lon},
-                                    dtype=np.float32)
+                        coords={'time': tisr_datetimes, 'lat': ds.lat, 'lon': ds.lon})
 
         # Create an xarray dataset from the DataArray
         tisr_xarr_dataset = xr.Dataset({'toa_incident_solar_radiation': tisr_data_arr}) 
@@ -254,6 +253,7 @@ class GFSDataProcessor:
         ds['lat'] = ds['lat'].astype('float32')
         ds['lon'] = ds['lon'].astype('float32')
         ds['level'] = ds['level'].astype('int32')
+        ds['toa_incident_solar_radiation'] = ds['toa_incident_solar_radiation'].astype('float32')
         
         # Adjust time values relative to the first time step
         ds['time'] = ds['time'] - ds.time[0]
