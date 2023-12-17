@@ -60,7 +60,7 @@ class GraphCastModel:
             self.mean_by_level = xarray.load_dataset(f).compute()
         with open(stddev_path, "rb") as f:
             self.stddev_by_level = xarray.load_dataset(f).compute()
-
+    
     def construct_wrapped_graphcast(self):
         """Construct and wrap the GraphCast predictor."""
         predictor = graphcast.GraphCast(self.model_config, self.task_config)
@@ -84,6 +84,12 @@ class GraphCastModel:
             targets_template=self.targets * np.nan, forcings=self.forcings
         )
         predictions.to_netcdf(f"gc_preds_{fname}.nc")
+
+    # Jax doesn't seem to like passing configs as args through the jit. Passing it
+    # in via partial (instead of capture by closure) forces jax to invalidate the
+    # jit cache if you change configs.
+    def _with_configs(self, fn):
+        return functools.partial(fn, model_config=self.model_config, task_config=self.task_config,)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run GraphCast prediction.")
