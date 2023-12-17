@@ -91,7 +91,7 @@ class GraphCastModel:
             jax.jit(self.run_forward), rng=jax.random.PRNGKey(0), inputs=self.inputs,
             targets_template=self.targets * np.nan, forcings=self.forcings
         )
-        predictions.to_netcdf(f"gc_preds_{fname}.nc")
+        predictions.to_netcdf(f"gc_forecasts_{fname}.nc")
 
     # Jax doesn't seem to like passing configs as args through the jit. Passing it
     # in via partial (instead of capture by closure) forces jax to invalidate the
