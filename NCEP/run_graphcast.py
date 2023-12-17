@@ -90,6 +90,13 @@ class GraphCastModel:
     # jit cache if you change configs.
     def _with_configs(self, fn):
         return functools.partial(fn, model_config=self.model_config, task_config=self.task_config,)
+    
+    # Always pass params and state, so the usage below are simpler
+    def _with_params(self, fn):
+        return functools.partial(fn, params=self.params, state=self.state)
+
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run GraphCast prediction.")
