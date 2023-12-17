@@ -16,7 +16,7 @@ from graphcast import graphcast
 from graphcast import normalization
 from graphcast import rollout
 
-class GraphCastRunner:
+class GraphCastModel:
     def __init__(self):
         self.params = None
         self.state = {}
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", help="Output filename", required=True)
     args = parser.parse_args()
 
-    runner = GraphCastRunner()
+    runner = GraphCastModel()
     runner.load_pretrained_model("/contrib/Sadegh.Tabas/graphcast/NCEP/params/GraphCast_operational - ERA5-HRES 1979-2021 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz")
     runner.load_gdas_data(args.input)
     runner.extract_inputs_targets_forcings()
