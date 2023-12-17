@@ -277,12 +277,12 @@ class GFSDataProcessor:
         #ds['toa_incident_solar_radiation'] = ds['toa_incident_solar_radiation'] * 3600
         
         # Define the output NetCDF file
-        date = date_folders[0]
+        date = (self.start_datetime + timedelta(hours=6)).strftime('%Y%m%d%H')
         steps = str(len(ds['time'])-2)
 
         if self.output_directory is None:
             self.output_directory = os.getcwd()  # Use current directory if not specified
-        output_netcdf = os.path.join(self.output_directory, f"source-gdas_date-{self.end_datetime}_res-0.25_levels-13_steps-{steps}.nc")
+        output_netcdf = os.path.join(self.output_directory, f"source-gdas_date-{date}_res-0.25_levels-13_steps-{steps}.nc")
 
         # Save the merged dataset as a NetCDF file
         ds.to_netcdf(output_netcdf)
