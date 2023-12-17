@@ -63,12 +63,20 @@ class GraphCastModel:
     
     def construct_wrapped_graphcast(self):
         """Construct and wrap the GraphCast predictor."""
+        
+        # Deeper one-step predictor
         predictor = graphcast.GraphCast(self.model_config, self.task_config)
+
+        # Modify inputs/outputs to `graphcast.GraphCast` to handle conversion to
+        # from/to float32 to/from BFloat16.
         predictor = casting.Bfloat16Cast(predictor)
-        predictor = normalization.InputsAndResiduals(
-            predictor, diffs_stddev_by_level=self.diffs_stddev_by_level,
-            mean_by_level=self.mean_by_level, stddev_by_level=self.stddev_by_level
-        )
+
+        # Modify inputs/outputs to `casting.Bfloat16Cast` so the casting to/from
+        # BFloat16 happens after applying normalization to the inputs/targets.
+        predictor = normalization.InputsAndResiduals(predictor, diffs_stddev_by_level=self.diffs_stddev_by_level,
+                                                     mean_by_level=self.mean_by_level, stddev_by_level=self.stddev_by_level)
+
+        # Wraps everything so the one-step model can produce trajectories.
         predictor = autoregressive.Predictor(predictor, gradient_checkpointing=True)
         return predictor
 
