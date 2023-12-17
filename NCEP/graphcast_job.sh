@@ -55,7 +55,7 @@ echo "Execution time for gdas_utility.py: $execution_time seconds"
 start_time=$(date +%s)
 echo "start runing graphcast to get real time 10-days forecasts for: $curr_datetime"
 # Run another Python script
-python3 run_graphcast.py -i source-gdas_date-"$prev_datetime"_res-0.25_levels-13_steps-40.nc -o "$curr_datetime"
+python3 run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-13_steps-40.nc -o "$curr_datetime"
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 
