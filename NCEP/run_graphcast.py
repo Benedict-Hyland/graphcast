@@ -41,8 +41,9 @@ class GraphCastRunner:
 
     def load_gdas_data(self, gdas_data_path):
         """Load GDAS data."""
-        with open(gdas_data_path, "rb") as f:
-            self.current_batch = xarray.load_dataset(f).compute()
+        #with open(gdas_data_path, "rb") as f:
+        #    self.current_batch = xarray.load_dataset(f).compute()
+        self.current_batch = xarray.load_dataset(gdas_data_path).compute()
         assert self.current_batch.dims["time"] == 42
 
     def extract_inputs_targets_forcings(self):
