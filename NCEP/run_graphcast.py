@@ -105,15 +105,15 @@ class GraphCastModel:
     
  
     def get_predictions(self, fname):
-        """Save predictions to a NetCDF file."""
+        """Run GraphCast and save forecasts to a NetCDF file."""
         
         self.load_model()
             
         # output = self.model(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
-        output = rollout.chunked_prediction(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
+        forecasts = rollout.chunked_prediction(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
         
-        # save outputs
-        output.to_netcdf(f"gc_forecasts_{fname}.nc")
+        # save forecasts
+        forecasts.to_netcdf(f"forecasts/gc_forecasts_{fname}.nc")
 
 
 
