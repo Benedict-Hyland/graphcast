@@ -1,6 +1,6 @@
 # GraphCast model with NCEP GDAS Products as ICs
 
-This repository provides scripts to run real-time GraphCast using GDAS products as inputs. There are multiple scripts in the repo including:
+This repository provides scripts to run real-time GraphCast using GDAS products as inputs. There are multiple scripts in the repository including:
 - `gdas_utility.py`: a Python script designed to download Global Data Assimilation System (GDAS) data from the National Centers for Environmental Prediction (NCEP) S3 bucket, and prepare the data in a format suitable for input into the GraphCast weather prediction system.
 - `run_graphcast.py`: a Python script that calls GraphCast and takes GDAS products as input and produces 40 six-hourly forecasts (10-days lead time).
 - `graphcast_job.sh`: a Bash script that automates running GraphCast in real-time over the AWS cloud machine (should be submitted through CronJob).
@@ -14,7 +14,7 @@ This repository provides scripts to run real-time GraphCast using GDAS products 
 
 ## Overview
 
-The National Centers for Environmental Prediction (NCEP) provides GDAS data that can be used for weather prediction and analysis. This repo simplifies the process of downloading GDAS data, extracting relevant variables, and converting it into a format compatible with the GraphCast weather prediction system. In addition, it automates running GraphCast with GDAS inputs on the AWS machine.
+The National Centers for Environmental Prediction (NCEP) provides GDAS data that can be used for weather prediction and analysis. This repository simplifies the process of downloading GDAS data, extracting relevant variables, and converting it into a format compatible with the GraphCast weather prediction system. In addition, it automates running GraphCast with GDAS inputs on the AWS cloud.
 
 ## Prerequisites and Installation
 
