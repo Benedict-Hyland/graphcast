@@ -44,12 +44,12 @@ class GraphCastModel:
         #with open(gdas_data_path, "rb") as f:
         #    self.current_batch = xarray.load_dataset(f).compute()
         self.current_batch = xarray.load_dataset(gdas_data_path).compute()
-        assert self.current_batch.dims["time"] == 42
+        assert self.current_batch.dims["time"] == 14
 
     def extract_inputs_targets_forcings(self):
         """Extract inputs, targets, and forcings from the loaded data."""
         self.inputs, self.targets, self.forcings = data_utils.extract_inputs_targets_forcings(
-            self.current_batch, target_lead_times=slice("6h", f"{40*6}h"), **dataclasses.asdict(self.task_config)
+            self.current_batch, target_lead_times=slice("6h", f"{4*6}h"), **dataclasses.asdict(self.task_config)
         )
 
     def load_normalization_stats(self, diffs_stddev_path, mean_path, stddev_path):
@@ -61,44 +61,12 @@ class GraphCastModel:
         with open(stddev_path, "rb") as f:
             self.stddev_by_level = xarray.load_dataset(f).compute()
     
-    def construct_wrapped_graphcast(self):
-        """Construct and wrap the GraphCast predictor."""
-        
-        # Deeper one-step predictor
-        predictor = graphcast.GraphCast(self.model_config, self.task_config)
-
-        # Modify inputs/outputs to `graphcast.GraphCast` to handle conversion to
-        # from/to float32 to/from BFloat16.
-        predictor = casting.Bfloat16Cast(predictor)
-
-        # Modify inputs/outputs to `casting.Bfloat16Cast` so the casting to/from
-        # BFloat16 happens after applying normalization to the inputs/targets.
-        predictor = normalization.InputsAndResiduals(predictor, diffs_stddev_by_level=self.diffs_stddev_by_level,
-                                                     mean_by_level=self.mean_by_level, stddev_by_level=self.stddev_by_level)
-
-        # Wraps everything so the one-step model can produce trajectories.
-        predictor = autoregressive.Predictor(predictor, gradient_checkpointing=True)
-        return predictor
-
-    def run_forward(self):
-        """Run the forward pass."""
-        predictor = self.construct_wrapped_graphcast()
-        return predictor(self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings)
-
-    def save_predictions(self, fname):
-        """Save predictions to a NetCDF file."""
-        predictions = rollout.chunked_prediction(
-            jax.jit(self.run_forward), rng=jax.random.PRNGKey(0), inputs=self.inputs,
-            targets_template=self.targets * np.nan, forcings=self.forcings
-        )
-        predictions.to_netcdf(f"gc_forecasts_{fname}.nc")
-
     # Jax doesn't seem to like passing configs as args through the jit. Passing it
     # in via partial (instead of capture by closure) forces jax to invalidate the
     # jit cache if you change configs.
     def _with_configs(self, fn):
         return functools.partial(fn, model_config=self.model_config, task_config=self.task_config,)
-    
+
     # Always pass params and state, so the usage below are simpler
     def _with_params(self, fn):
         return functools.partial(fn, params=self.params, state=self.state)
@@ -108,6 +76,46 @@ class GraphCastModel:
     @staticmethod
     def _drop_state(fn):
         return lambda **kw: fn(**kw)[0]
+
+    def load_model(self):
+        def construct_wrapped_graphcast(model_config, task_config):
+            """Constructs and wraps the GraphCast Predictor."""
+            # Deeper one-step predictor.
+            predictor = graphcast.GraphCast(model_config, task_config)
+
+            # Modify inputs/outputs to `graphcast.GraphCast` to handle conversion to
+            # from/to float32 to/from BFloat16.
+            predictor = casting.Bfloat16Cast(predictor)
+
+            # Modify inputs/outputs to `casting.Bfloat16Cast` so the casting to/from
+            # BFloat16 happens after applying normalization to the inputs/targets.
+            predictor = normalization.InputsAndResiduals(predictor, diffs_stddev_by_level=self.diffs_stddev_by_level, mean_by_level=self.mean_by_level, stddev_by_level=self.stddev_by_level,)
+
+            # Wraps everything so the one-step model can produce trajectories.
+            predictor = autoregressive.Predictor(predictor, gradient_checkpointing=True,)
+            return predictor
+
+        @hk.transform_with_state
+        def run_forward(model_config, task_config, inputs, targets_template, forcings,):
+            predictor = construct_wrapped_graphcast(model_config, task_config)
+            return predictor(inputs, targets_template=targets_template, forcings=forcings,)
+        
+        jax.jit(self._with_configs(run_forward.init))
+        self.model = self._drop_state(self._with_params(jax.jit(self._with_configs(run_forward.apply))))
+    
+ 
+    def get_predictions(self, fname):
+        """Save predictions to a NetCDF file."""
+        
+        self.load_model()
+            
+        # output = self.model(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
+        output = rollout.chunked_prediction(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
+        
+        # save outputs
+        output.to_netcdf(f"gc_forecasts_{fname}.nc")
+
+
 
 
 if __name__ == "__main__":
@@ -125,4 +133,4 @@ if __name__ == "__main__":
         "/contrib/graphcast/NCEP/stats/mean_by_level.nc", 
         "/contrib/graphcast/NCEP/stats/stddev_by_level.nc"
     )
-    runner.save_predictions(args.output)
+    runner.get_predictions(args.output)
