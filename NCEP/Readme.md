@@ -48,7 +48,7 @@ To use the utility, follow these steps:
    
    `cd graphcast/NCEP`
 
-3. Run the script with the desired start and end datetime (in "YYYYMMDDHH" format) as arguments:
+3. Submit the `graphcast_job.sh` to run for the most recent forecasts or run the above scripts with the desired start and end datetime (in "YYYYMMDDHH" format).
 
    `sbatch graphcast_job.sh`
 
