@@ -99,8 +99,8 @@ class GFSDataProcessor:
                 ':TMP:': {
                     'levels': [':2 m above ground:'],
                 },
-                ':PRES:': {
-                    'levels': [':surface:'],
+                ':PRMSL:': {
+                    'levels': [':mean sea level:'],
                 },
                 ':VGRD:': {
                     'levels': [':10 m above ground:'],
@@ -108,7 +108,7 @@ class GFSDataProcessor:
                 ':UGRD:': {
                     'levels': [':10 m above ground:'],
                 },
-                ':SPFH|DZDT|VGRD|UGRD|HGT|TMP:': {
+                ':SPFH|VVEL|VGRD|UGRD|HGT|TMP:': {
                     'levels': [':(50|100|150|200|250|300|400|500|600|700|850|925|1000) mb:'],
                 },
             },
@@ -205,7 +205,7 @@ class GFSDataProcessor:
             'plevel': 'level',
             'HGT_surface': 'geopotential_at_surface',
             'LAND_surface': 'land_sea_mask',
-            'PRES_surface': 'mean_sea_level_pressure',
+            'PRMSL_meansealevel': 'mean_sea_level_pressure',
             'TMP_2maboveground': '2m_temperature',
             'UGRD_10maboveground': '10m_u_component_of_wind',
             'VGRD_10maboveground': '10m_v_component_of_wind',
@@ -214,7 +214,7 @@ class GFSDataProcessor:
             'HGT': 'geopotential',
             'TMP': 'temperature',
             'SPFH': 'specific_humidity',
-            'DZDT': 'vertical_velocity',
+            'VVEL': 'vertical_velocity',
             'UGRD': 'u_component_of_wind',
             'VGRD': 'v_component_of_wind'
         })
@@ -222,7 +222,8 @@ class GFSDataProcessor:
         # calc toa incident solar radiation using PySolar package
         latitude = np.array(ds.lat)
         longitude = np.array(ds.lon)
-        dates=np.array(ds.time)
+        first_step = ds.time[0].values.astype('M8[us]').astype(datetime)
+        dates = [first_step + timedelta(hours=i*6) for i in range(42)]
 
         # Function to calculate extraterrestrial solar irradiance for a single combination of lat, lon, and time
         def calculate_irradiance(lat, lon, datetime):
@@ -230,14 +231,20 @@ class GFSDataProcessor:
         # Parallelize the calculations using joblib
         tisr = np.array(
             Parallel(n_jobs=-1)(
-                delayed(calculate_irradiance)(lat, lon, pytz.timezone('UTC').localize(datetime.strptime(str(date), '%Y-%m-%dT%H:%M:%S.%f000')))
+                delayed(calculate_irradiance)(lat, lon, pytz.timezone('UTC').localize(date))
                 for date in dates
                 for lat in latitude
                 for lon in longitude
             )
         ).reshape(len(dates), len(latitude), len(longitude))
+        
+        tisr_datetimes = np.array(dates, dtype='datetime64[ns]')
+        tisr_data_arr = xr.DataArray(tisr, dims=('time', 'lat', 'lon'),
+                        coords={'time': tisr_datetimes, 'lat': ds.lat, 'lon': ds.lon})
 
-        ds['toa_incident_solar_radiation'] = tuple((['time','lat','lon'], tisr.astype('float32')))
+        # Create an xarray dataset from the DataArray
+        tisr_xarr_dataset = xr.Dataset({'toa_incident_solar_radiation': tisr_data_arr}) 
+        ds = xr.merge([ds,tisr_xarr_dataset])
 
         # Assign 'datetime' as coordinates
         ds = ds.assign_coords(datetime=ds.time)
@@ -246,6 +253,7 @@ class GFSDataProcessor:
         ds['lat'] = ds['lat'].astype('float32')
         ds['lon'] = ds['lon'].astype('float32')
         ds['level'] = ds['level'].astype('int32')
+        ds['toa_incident_solar_radiation'] = ds['toa_incident_solar_radiation'].astype('float32')
         
         # Adjust time values relative to the first time step
         ds['time'] = ds['time'] - ds.time[0]
@@ -269,8 +277,8 @@ class GFSDataProcessor:
         #ds['toa_incident_solar_radiation'] = ds['toa_incident_solar_radiation'] * 3600
         
         # Define the output NetCDF file
-        date = date_folders[0]
-        steps = str(len(ds['time']))
+        date = (self.start_datetime + timedelta(hours=6)).strftime('%Y%m%d%H')
+        steps = str(len(ds['time'])-2)
 
         if self.output_directory is None:
             self.output_directory = os.getcwd()  # Use current directory if not specified
