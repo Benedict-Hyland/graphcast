@@ -1,3 +1,9 @@
+'''
+Description: Script to call the graphcast model using gdas products
+Author: Sadegh Sadeghi Tabas (sadegh.tabas@noaa.gov)
+Revision history:
+    -20231218: Sadegh Tabas, initial code
+'''
 import argparse
 import dataclasses
 import functools
