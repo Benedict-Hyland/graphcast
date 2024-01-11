@@ -277,6 +277,7 @@ if __name__ == "__main__":
     parser.add_argument("start_datetime", help="Start datetime in the format 'YYYYMMDDHH'")
     parser.add_argument("end_datetime", help="End datetime in the format 'YYYYMMDDHH'")
     parser.add_argument("-l", "--levels", help="number of pressure levels, options: 13, 37", default="13")
+    parser.add_argument("-s", "--source", help="the source repository to download gdas grib2 data, options: nomads (up-to-date), s3", default="nomads")
     parser.add_argument("-o", "--output", help="Output directory for processed data")
     parser.add_argument("-d", "--download", help="Download directory for raw data")
     parser.add_argument("-k", "--keep", help="Keep downloaded data (yes or no)", default="yes")
