@@ -29,11 +29,13 @@ class GFSDataProcessor:
         self.download_directory = download_directory
         self.keep_downloaded_data = keep_downloaded_data
 
-        # Initialize the S3 client
-        self.s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
-
-        # Specify the S3 bucket name and root directory
-        self.bucket_name = 'noaa-gfs-bdp-pds'
+        if self.download_source == 's3':
+            # Initialize the S3 client
+            self.s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
+    
+            # Specify the S3 bucket name and root directory
+            self.bucket_name = 'noaa-gfs-bdp-pds'
+        
         self.root_directory = 'gdas'
 
         # Specify the local directory where you want to save the files
