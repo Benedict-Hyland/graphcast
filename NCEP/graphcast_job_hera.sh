@@ -9,7 +9,7 @@
 
 
 # load necessary modules
-module use /contrib/spack-stack/envs/ufswm/install/modulefiles/Core/
+module use /scratch1/NCEPDEV/nems/role.epic/spack-stack/spack-stack-1.5.1/envs/unified-env/install/modulefiles/Core
 module load stack-intel
 module load wgrib2
 module list
