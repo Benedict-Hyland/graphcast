@@ -105,9 +105,6 @@ class GFSDataProcessor:
                 ':VGRD|UGRD:': {
                     'levels': [':10 m above ground:'],
                 },
-                #':UGRD:': {
-                #    'levels': [':10 m above ground:'],
-                #},
                 ':SPFH|VVEL|VGRD|UGRD|HGT|TMP:': {
                     'levels': [':(50|100|150|200|250|300|400|500|600|700|850|925|1000) mb:'],
                 },
