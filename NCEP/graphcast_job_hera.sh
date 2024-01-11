@@ -38,7 +38,7 @@ echo "6 hours earlier state: $prev_datetime"
 export PATH="/contrib/Sadegh.Tabas/miniconda3/bin:$PATH"
 
 # Activate Conda environment
-source /contrib/Sadegh.Tabas/miniconda3/etc/profile.d/conda.sh
+source /scratch1/NCEPDEV/nems/AIML/miniconda3/etc/profile.d/conda.sh
 conda activate mlwp
 
 start_time=$(date +%s)
