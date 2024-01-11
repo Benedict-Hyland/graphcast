@@ -176,7 +176,6 @@ class GFSDataProcessor:
                                     else:
                                         os.remove(output_file)
                                 
-                                
                                 # Optionally, remove the intermediate GRIB2 file
                                 # os.remove(output_file)
         print("Merging grib2 files:")
@@ -238,9 +237,6 @@ class GFSDataProcessor:
 
         # Update total_precipitation_6hr unit to (m) from (kg/m^2) by dividing it by 1000kg/m³
         ds['total_precipitation_6hr'] = ds['total_precipitation_6hr'] / 1000
-
-        ## Update USWRF (w/m^2), to be used as ERA5 toa_incident_solar_radiation (J/m^2); ( x 3600s)
-        #ds['toa_incident_solar_radiation'] = ds['toa_incident_solar_radiation'] * 3600
         
         # Define the output NetCDF file
         date = (self.start_datetime + timedelta(hours=6)).strftime('%Y%m%d%H')
