@@ -20,10 +20,11 @@ import argparse
 
 
 class GFSDataProcessor:
-    def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, output_directory=None, download_directory=None, keep_downloaded_data=True):
+    def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, download_source, output_directory=None, download_directory=None, keep_downloaded_data=True):
         self.start_datetime = start_datetime
         self.end_datetime = end_datetime
         self.num_levels = num_pressure_levels
+        self.download_source = download_source
         self.output_directory = output_directory
         self.download_directory = download_directory
         self.keep_downloaded_data = keep_downloaded_data
@@ -287,10 +288,11 @@ if __name__ == "__main__":
     start_datetime = datetime.strptime(args.start_datetime, "%Y%m%d%H")
     end_datetime = datetime.strptime(args.end_datetime, "%Y%m%d%H")
     num_pressure_levels = int(args.levels)
+    download_source = args.source
     output_directory = args.output
     download_directory = args.download
     keep_downloaded_data = args.keep.lower() == "yes"
 
-    data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, output_directory, download_directory, keep_downloaded_data)
+    data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, download_source, output_directory, download_directory, keep_downloaded_data)
     data_processor.download_data()
     data_processor.process_data()
