@@ -20,7 +20,7 @@ import argparse
 
 
 class GFSDataProcessor:
-    def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, download_source, output_directory=None, download_directory=None, keep_downloaded_data=True):
+    def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, download_source='nomads', output_directory=None, download_directory=None, keep_downloaded_data=True):
         self.start_datetime = start_datetime
         self.end_datetime = end_datetime
         self.num_levels = num_pressure_levels
