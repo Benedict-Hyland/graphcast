@@ -16,9 +16,6 @@ from datetime import datetime, timedelta
 from botocore.config import Config
 from botocore import UNSIGNED
 import argparse
-from pysolar.util import extraterrestrial_irrad
-from joblib import Parallel, delayed
-import pytz
 
 
 
@@ -113,11 +110,6 @@ class GFSDataProcessor:
                     'levels': [':(50|100|150|200|250|300|400|500|600|700|850|925|1000) mb:'],
                 },
             },
-            #'.f001': {
-            #    ':USWRF:': {
-            #        'levels': [':top of atmosphere:'],
-            #    },
-            #},
             '.f006': {
                 ':LAND:': {
                     'levels': [':surface:'],
@@ -211,7 +203,6 @@ class GFSDataProcessor:
             'UGRD_10maboveground': '10m_u_component_of_wind',
             'VGRD_10maboveground': '10m_v_component_of_wind',
             'APCP_surface': 'total_precipitation_6hr',
-            #'USWRF_topofatmosphere': 'toa_incident_solar_radiation',
             'HGT': 'geopotential',
             'TMP': 'temperature',
             'SPFH': 'specific_humidity',
@@ -219,33 +210,6 @@ class GFSDataProcessor:
             'UGRD': 'u_component_of_wind',
             'VGRD': 'v_component_of_wind'
         })
-        print("Calculating toa incident solar radiation using PySolar package")
-        # calc toa incident solar radiation using PySolar package
-        latitude = np.array(ds.lat)
-        longitude = np.array(ds.lon)
-        first_step = ds.time[0].values.astype('M8[us]').astype(datetime)
-        dates = [first_step + timedelta(hours=i*6) for i in range(42)]
-
-        # Function to calculate extraterrestrial solar irradiance for a single combination of lat, lon, and time
-        def calculate_irradiance(lat, lon, datetime):
-            return extraterrestrial_irrad(lat, lon, datetime) * 3600
-        # Parallelize the calculations using joblib
-        tisr = np.array(
-            Parallel(n_jobs=-1)(
-                delayed(calculate_irradiance)(lat, lon, pytz.timezone('UTC').localize(date))
-                for date in dates
-                for lat in latitude
-                for lon in longitude
-            )
-        ).reshape(len(dates), len(latitude), len(longitude))
-        
-        tisr_datetimes = np.array(dates, dtype='datetime64[ns]')
-        tisr_data_arr = xr.DataArray(tisr, dims=('time', 'lat', 'lon'),
-                        coords={'time': tisr_datetimes, 'lat': ds.lat, 'lon': ds.lon})
-
-        # Create an xarray dataset from the DataArray
-        tisr_xarr_dataset = xr.Dataset({'toa_incident_solar_radiation': tisr_data_arr}) 
-        ds = xr.merge([ds,tisr_xarr_dataset])
 
         # Assign 'datetime' as coordinates
         ds = ds.assign_coords(datetime=ds.time)
@@ -254,7 +218,6 @@ class GFSDataProcessor:
         ds['lat'] = ds['lat'].astype('float32')
         ds['lon'] = ds['lon'].astype('float32')
         ds['level'] = ds['level'].astype('int32')
-        ds['toa_incident_solar_radiation'] = ds['toa_incident_solar_radiation'].astype('float32')
         
         # Adjust time values relative to the first time step
         ds['time'] = ds['time'] - ds.time[0]
