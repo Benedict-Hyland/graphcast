@@ -20,9 +20,10 @@ import argparse
 
 
 class GFSDataProcessor:
-    def __init__(self, start_datetime, end_datetime, output_directory=None, download_directory=None, keep_downloaded_data=True):
+    def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, output_directory=None, download_directory=None, keep_downloaded_data=True):
         self.start_datetime = start_datetime
         self.end_datetime = end_datetime
+        self.num_levels = num_pressure_levels
         self.output_directory = output_directory
         self.download_directory = download_directory
         self.keep_downloaded_data = keep_downloaded_data
@@ -150,7 +151,7 @@ class GFSDataProcessor:
                                 output_file = f'{variable}_{level}_{date_folder}_{hour}{file_extension}.nc'
 
                                 # Use wgrib2 to extract the variable with level
-                                wgrib2_command = ['wgrib2', '-nc_nlev', '13', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
+                                wgrib2_command = ['wgrib2', '-nc_nlev', f'{self.num_levels}', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
                                 subprocess.run(wgrib2_command, check=True)
 
                                 # Open the extracted netcdf file as an xarray dataset
