@@ -272,9 +272,10 @@ class GFSDataProcessor:
                 print(f"Error removing downloaded data: {str(e)}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Download and process GFS data")
+    parser = argparse.ArgumentParser(description="Download and process GDAS data")
     parser.add_argument("start_datetime", help="Start datetime in the format 'YYYYMMDDHH'")
     parser.add_argument("end_datetime", help="End datetime in the format 'YYYYMMDDHH'")
+    parser.add_argument("-l", "--levels", help="number of pressure levels, options: 13, 37", default="13")
     parser.add_argument("-o", "--output", help="Output directory for processed data")
     parser.add_argument("-d", "--download", help="Download directory for raw data")
     parser.add_argument("-k", "--keep", help="Keep downloaded data (yes or no)", default="yes")
@@ -283,10 +284,11 @@ if __name__ == "__main__":
 
     start_datetime = datetime.strptime(args.start_datetime, "%Y%m%d%H")
     end_datetime = datetime.strptime(args.end_datetime, "%Y%m%d%H")
+    num_pressure_levels = int(args.levels)
     output_directory = args.output
     download_directory = args.download
     keep_downloaded_data = args.keep.lower() == "yes"
 
-    data_processor = GFSDataProcessor(start_datetime, end_datetime, output_directory, download_directory, keep_downloaded_data)
+    data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, output_directory, download_directory, keep_downloaded_data)
     data_processor.download_data()
     data_processor.process_data()
