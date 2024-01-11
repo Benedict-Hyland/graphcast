@@ -34,9 +34,6 @@ prev_datetime=$( date -d "$datetime 18 hour ago" "+%Y%m%d%H" )
 echo "Current state: $curr_datetime"
 echo "6 hours earlier state: $prev_datetime"
 
-# Set Miniconda path
-export PATH="/contrib/Sadegh.Tabas/miniconda3/bin:$PATH"
-
 # Activate Conda environment
 source /scratch1/NCEPDEV/nems/AIML/miniconda3/etc/profile.d/conda.sh
 conda activate mlwp
