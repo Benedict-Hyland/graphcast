@@ -7,6 +7,8 @@ Revision history:
 '''
 import os
 import sys
+from time import time
+
 import boto3
 import xarray as xr
 import subprocess
@@ -226,26 +228,26 @@ class GFSDataProcessor:
         first_step = ds.time[0].values.astype('M8[us]').astype(datetime)
         dates = [first_step + timedelta(hours=i*6) for i in range(42)]
 
-        # Function to calculate extraterrestrial solar irradiance for a single combination of lat, lon, and time
-        def calculate_irradiance(lat, lon, datetime):
-            return extraterrestrial_irrad(lat, lon, datetime) * 3600
-        # Parallelize the calculations using joblib
-        tisr = np.array(
-            Parallel(n_jobs=-1)(
-                delayed(calculate_irradiance)(lat, lon, pytz.timezone('UTC').localize(date))
-                for date in dates
-                for lat in latitude
-                for lon in longitude
-            )
-        ).reshape(len(dates), len(latitude), len(longitude))
-        
-        tisr_datetimes = np.array(dates, dtype='datetime64[ns]')
-        tisr_data_arr = xr.DataArray(tisr, dims=('time', 'lat', 'lon'),
-                        coords={'time': tisr_datetimes, 'lat': ds.lat, 'lon': ds.lon})
+        ## Function to calculate extraterrestrial solar irradiance for a single combination of lat, lon, and time
+        #def calculate_irradiance(lat, lon, datetime):
+        #    return extraterrestrial_irrad(lat, lon, datetime) * 3600
+        ## Parallelize the calculations using joblib
+        #tisr = np.array(
+        #    Parallel(n_jobs=-1)(
+        #        delayed(calculate_irradiance)(lat, lon, pytz.timezone('UTC').localize(date))
+        #        for date in dates
+        #        for lat in latitude
+        #        for lon in longitude
+        #    )
+        #).reshape(len(dates), len(latitude), len(longitude))
+        #
+        #tisr_datetimes = np.array(dates, dtype='datetime64[ns]')
+        #tisr_data_arr = xr.DataArray(tisr, dims=('time', 'lat', 'lon'),
+        #                coords={'time': tisr_datetimes, 'lat': ds.lat, 'lon': ds.lon})
 
-        # Create an xarray dataset from the DataArray
-        tisr_xarr_dataset = xr.Dataset({'toa_incident_solar_radiation': tisr_data_arr}) 
-        ds = xr.merge([ds,tisr_xarr_dataset])
+        ## Create an xarray dataset from the DataArray
+        #tisr_xarr_dataset = xr.Dataset({'toa_incident_solar_radiation': tisr_data_arr}) 
+        #ds = xr.merge([ds,tisr_xarr_dataset])
 
         # Assign 'datetime' as coordinates
         ds = ds.assign_coords(datetime=ds.time)
@@ -254,7 +256,7 @@ class GFSDataProcessor:
         ds['lat'] = ds['lat'].astype('float32')
         ds['lon'] = ds['lon'].astype('float32')
         ds['level'] = ds['level'].astype('int32')
-        ds['toa_incident_solar_radiation'] = ds['toa_incident_solar_radiation'].astype('float32')
+        #ds['toa_incident_solar_radiation'] = ds['toa_incident_solar_radiation'].astype('float32')
         
         # Adjust time values relative to the first time step
         ds['time'] = ds['time'] - ds.time[0]
@@ -311,10 +313,6 @@ class GFSDataProcessor:
         #}
         variables_to_extract = {
             '.f000': {
-                #':HGT:': {
-                #    'levels': [':surface:'],
-                #    'first_time_step_only': True,  # Extract only the first time step
-                #},
                 '2t': {
                     'typeOfLevel': 'heightAboveGround',
                     'level': 2,
@@ -331,19 +329,14 @@ class GFSDataProcessor:
                     'typeOfLevel': 'isobaricInhPa',
                     'level': [50,100,150,200,250,300,400,500,600,700,850,925,1000],
                 },
-                'lsm': {
+                'lsm, orog': {
                     'typeOfLevel': 'surface',
                     'level': 0,
                     'first_time_step_only': True,  # Extract only the first time step
                 },
             },
             '.f006': {
-            #    'lsm': {
-            #        'typeOfLevel': 'surface',
-            #        'level': 0,
-            #        'first_time_step_only': True,  # Extract only the first time step
-            #    },
-                'tp': {  # APCP
+                'tp': {  # total precipitation 
                     'typeOfLevel': 'surface',
                     'level': 0,
                 },
@@ -355,6 +348,7 @@ class GFSDataProcessor:
         print("Start extracting variables and associated levels from grib2 files:")
         # Loop through each folder (e.g., gdas.yyyymmdd)
         date_folders = sorted(next(os.walk(data_directory))[1])
+        total_files = 0 # to track files
         for date_folder in date_folders:
             date_folder_path = os.path.join(data_directory, date_folder)
 
@@ -368,17 +362,26 @@ class GFSDataProcessor:
                     mergeDAs = []
 
                     for file_extension, variables in variables_to_extract.items():
+                        total_files = total_files + 1
                         fname = os.path.join(subfolder_path, f'gdas.t{hour}z.pgrb2.0p25{file_extension}')
 
+                        #open grib file
                         grbs = pygrib.open(fname)
+
                         for key, value in variables.items():
-                            print(f'Var names: {key}')
+
                             variable_names = key.split(', ')
                             levelType = value['typeOfLevel']
                             desired_level = value['level']
                     
                             for var_name in variable_names:
-                                print(f'Get variable {var_name} from {fname}:')
+
+                                # if var_name in ['orog', 'lsm'= and total_files > 1, then skip
+                                if total_files > 1 and var_name in ['lsm', 'orog']: 
+                                    print(f'Skip variable {var_name}!')
+                                    continue
+                                
+                                print(f'Get variable {var_name} from file {total_files} {fname}:')
                                 # Find the matching grib message
                                 variable_message = grbs.select(shortName=var_name, typeOfLevel=levelType, level=desired_level)
                                 #print(f'length is {len(variable_message)}!')
@@ -439,11 +442,14 @@ class GFSDataProcessor:
                                         }
                                     )
      
-                                #change tp's time
-                                #if var_name == 'tp':
-                                #    da['time'] = da['time'] + np.timedelta64(6, 'h')
-
                                 da[var_name] = da[var_name].astype('float32')
+
+                                #assign attributes
+                                #da.assign_attrs(
+                                #    long_name = variable_message[0].name,
+                                #    units = variable_message[0].units,
+                                #)
+
                                 mergeDAs.append(da)
                                 da.close()
         
@@ -454,12 +460,18 @@ class GFSDataProcessor:
                     mergeDSs.append(ds)
                     ds.close()
 
-       
         ds = xr.concat(mergeDSs, dim='time')
+
+        #reduce orog/lsm from 3D to 2D
+        ds['lsm0'] = ds.lsm.mean('time')
+        ds['orog0'] = ds.orog.mean('time')
+        ds = ds.drop_vars(['lsm', 'orog'])
+ 
         ds = ds.rename({
             'latitude': 'lat',
             'longitude': 'lon',
-            'lsm': 'land_sea_mask',
+            'lsm0': 'land_sea_mask',
+            'orog0': 'geopotential_at_surface',
             'prmsl': 'mean_sea_level_pressure',
             '2t': '2m_temperature',
             '10u': '10m_u_component_of_wind',
@@ -480,11 +492,11 @@ class GFSDataProcessor:
         ds['datetime'] = ds['datetime'].expand_dims(dim='batch')
 
         # Squeeze dimensions
-        #ds['geopotential_at_surface'] = ds['geopotential_at_surface'].squeeze('batch')
+        ds['geopotential_at_surface'] = ds['geopotential_at_surface'].squeeze('batch')
         ds['land_sea_mask'] = ds['land_sea_mask'].squeeze('batch')
 
         # Update geopotential unit to m2/s2 by multiplying 9.80665
-        #ds['geopotential_at_surface'] = ds['geopotential_at_surface'] * 9.80665
+        ds['geopotential_at_surface'] = ds['geopotential_at_surface'] * 9.80665
         ds['geopotential'] = ds['geopotential'] * 9.80665
 
         # Define the output NetCDF file
@@ -528,5 +540,10 @@ if __name__ == "__main__":
     keep_downloaded_data = args.keep.lower() == "yes"
 
     data_processor = GFSDataProcessor(start_datetime, end_datetime, output_directory, download_directory, keep_downloaded_data)
-    data_processor.download_data()
+    #data_processor.download_data()
+    t0 = time()
+    #data_processor.process_data_with_wgrib2()
+    #print(f'wgrib2 took {(time() - t0)/60} mins to process data')
+
     data_processor.process_data_with_pygrib()
+    print(f'pygrib took {(time() - t0)/60} mins to process data {start_datetime} to {end_datetime}')
