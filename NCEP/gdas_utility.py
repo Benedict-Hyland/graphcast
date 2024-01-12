@@ -46,7 +46,32 @@ class GFSDataProcessor:
 
         # List of file formats to download
         self.file_formats = ['0p25.f000', '0p25.f006'] # , '0p25.f001'
+    
+    def s3bucket(self, date_str, time_str):
+        # Construct the S3 prefix for the directory
+        s3_prefix = f"{self.root_directory}.{date_str}/{time_str}/"
+        # List objects in the S3 directory
+        s3_objects = self.s3.list_objects_v2(Bucket=self.bucket_name, Prefix=s3_prefix)
 
+        # Filter objects based on the desired formats
+        for obj in s3_objects.get('Contents', []):
+            obj_key = obj['Key']
+            for file_format in self.file_formats:
+                if obj_key.endswith(f'.{file_format}'):
+                    # Define the local directory path where the file will be saved
+                    local_directory = os.path.join(self.local_base_directory, date_str, time_str)
+
+                    # Create the local directory if it doesn't exist
+                    os.makedirs(local_directory, exist_ok=True)
+
+                    # Define the local file path
+                    local_file_path = os.path.join(local_directory, os.path.basename(obj_key))
+
+                    # Download the file from S3 to the local path
+                    self.s3.download_file(self.bucket_name, obj_key, local_file_path)
+                    print(f"Downloaded {obj_key} to {local_file_path}")
+        return
+        
     def download_data(self):
         # Calculate the number of 6-hour intervals
         delta = (self.end_datetime - self.start_datetime)
@@ -58,29 +83,11 @@ class GFSDataProcessor:
             date_str = current_datetime.strftime("%Y%m%d")
             time_str = current_datetime.strftime("%H")
 
-            # Construct the S3 prefix for the directory
-            s3_prefix = f"{self.root_directory}.{date_str}/{time_str}/"
-
-            # List objects in the S3 directory
-            s3_objects = self.s3.list_objects_v2(Bucket=self.bucket_name, Prefix=s3_prefix)
-
-            # Filter objects based on the desired formats
-            for obj in s3_objects.get('Contents', []):
-                obj_key = obj['Key']
-                for file_format in self.file_formats:
-                    if obj_key.endswith(f'.{file_format}'):
-                        # Define the local directory path where the file will be saved
-                        local_directory = os.path.join(self.local_base_directory, date_str, time_str)
-
-                        # Create the local directory if it doesn't exist
-                        os.makedirs(local_directory, exist_ok=True)
-
-                        # Define the local file path
-                        local_file_path = os.path.join(local_directory, os.path.basename(obj_key))
-
-                        # Download the file from S3 to the local path
-                        self.s3.download_file(self.bucket_name, obj_key, local_file_path)
-                        print(f"Downloaded {obj_key} to {local_file_path}")
+            if self.download_source == 's3':
+                self.s3bucket(date_str, time_str)
+            else:
+                continue
+            
 
             # Move to the next 6-hour interval
             current_datetime += timedelta(hours=6)
