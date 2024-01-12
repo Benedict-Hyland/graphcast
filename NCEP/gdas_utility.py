@@ -68,16 +68,36 @@ class GFSDataProcessor:
                     print(f"Downloaded {obj_key} to {local_file_path}")
         return
     
-    def nomads((self, date_str, time_str, local_directory):
+    def nomads(self, date_str, time_str, local_directory):
         # Construct the URL for the data directory
-        url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/{self.root_directory}.{date_str}/{time_str}/atmos/"
+        gdas_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/{self.root_directory}.{date_str}/{time_str}/atmos/"
         
         # Get the list of files from the URL
-        response = requests.get(url)
+        response = requests.get(gdas_url)
         if response.status_code == 200:
-            files = response.text.split('\n')
+            # Parse the HTML content using BeautifulSoup
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Find all anchor tags (links) in the HTML
+            anchor_tags = soup.find_all('a')
+            
+            # Extract file URLs from href attributes of anchor tags
+            file_urls = [folder_url + tag['href'] for tag in anchor_tags if tag.get('href')]
 
-        
+            for file_url in file_urls: 
+                for file_format in self.file_formats:
+                    if file_url.endswith(f'.{file_format}'):
+                        
+                        # Define the local file path
+                        local_file_path = os.path.join(local_directory, os.path.basename(file_url))
+                        
+                        # Download the file from S3 to the local path
+                        try:
+                            # Run the wget command
+                            subprocess.run(['wget', file_url, '-O', local_file_path], check=True)
+                            print(f"Download completed: {url} => {local_file_path}")
+                        except subprocess.CalledProcessError as e:
+                            print(f"Error downloading {url}: {e}")
         return
         
     def download_data(self):
@@ -100,7 +120,8 @@ class GFSDataProcessor:
             if self.download_source == 's3':
                 self.s3bucket(date_str, time_str, local_directory)
             else:
-                continue
+                self.nomads(date_str, time_str, local_directory)
+                
             
 
             # Move to the next 6-hour interval
