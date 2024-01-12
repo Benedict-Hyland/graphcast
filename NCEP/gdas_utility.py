@@ -95,9 +95,9 @@ class GFSDataProcessor:
                         try:
                             # Run the wget command
                             subprocess.run(['wget', file_url, '-O', local_file_path], check=True)
-                            print(f"Download completed: {url} => {local_file_path}")
+                            print(f"Download completed: {file_url} => {local_file_path}")
                         except subprocess.CalledProcessError as e:
-                            print(f"Error downloading {url}: {e}")
+                            print(f"Error downloading {file_url}: {e}")
         return
         
     def download_data(self):
