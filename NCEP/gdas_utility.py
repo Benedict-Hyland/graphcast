@@ -71,6 +71,9 @@ class GFSDataProcessor:
                     self.s3.download_file(self.bucket_name, obj_key, local_file_path)
                     print(f"Downloaded {obj_key} to {local_file_path}")
         return
+    
+    def nomads((self, date_str, time_str):
+        return
         
     def download_data(self):
         # Calculate the number of 6-hour intervals
@@ -94,6 +97,7 @@ class GFSDataProcessor:
 
         print("Download completed.")
 
+    
     def process_data(self):
         # Define the directory where your GRIB2 files are located
         data_directory = self.local_base_directory
