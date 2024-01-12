@@ -16,7 +16,8 @@ from datetime import datetime, timedelta
 from botocore.config import Config
 from botocore import UNSIGNED
 import argparse
-
+import requests
+from bs4 import BeautifulSoup
 
 
 class GFSDataProcessor:
@@ -47,7 +48,7 @@ class GFSDataProcessor:
         # List of file formats to download
         self.file_formats = ['0p25.f000', '0p25.f006'] # , '0p25.f001'
     
-    def s3bucket(self, date_str, time_str):
+    def s3bucket(self, date_str, time_str, local_directory):
         # Construct the S3 prefix for the directory
         s3_prefix = f"{self.root_directory}.{date_str}/{time_str}/"
         # List objects in the S3 directory
@@ -58,11 +59,6 @@ class GFSDataProcessor:
             obj_key = obj['Key']
             for file_format in self.file_formats:
                 if obj_key.endswith(f'.{file_format}'):
-                    # Define the local directory path where the file will be saved
-                    local_directory = os.path.join(self.local_base_directory, date_str, time_str)
-
-                    # Create the local directory if it doesn't exist
-                    os.makedirs(local_directory, exist_ok=True)
 
                     # Define the local file path
                     local_file_path = os.path.join(local_directory, os.path.basename(obj_key))
@@ -72,7 +68,16 @@ class GFSDataProcessor:
                     print(f"Downloaded {obj_key} to {local_file_path}")
         return
     
-    def nomads((self, date_str, time_str):
+    def nomads((self, date_str, time_str, local_directory):
+        # Construct the URL for the data directory
+        url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/{self.root_directory}.{date_str}/{time_str}/atmos/"
+        
+        # Get the list of files from the URL
+        response = requests.get(url)
+        if response.status_code == 200:
+            files = response.text.split('\n')
+
+        
         return
         
     def download_data(self):
@@ -85,9 +90,15 @@ class GFSDataProcessor:
         while current_datetime <= self.end_datetime:
             date_str = current_datetime.strftime("%Y%m%d")
             time_str = current_datetime.strftime("%H")
+            
+            # Define the local directory path where the file will be saved
+            local_directory = os.path.join(self.local_base_directory, date_str, time_str)
 
+            # Create the local directory if it doesn't exist
+            os.makedirs(local_directory, exist_ok=True)
+            
             if self.download_source == 's3':
-                self.s3bucket(date_str, time_str)
+                self.s3bucket(date_str, time_str, local_directory)
             else:
                 continue
             
