@@ -82,7 +82,7 @@ class GFSDataProcessor:
             anchor_tags = soup.find_all('a')
             
             # Extract file URLs from href attributes of anchor tags
-            file_urls = [folder_url + tag['href'] for tag in anchor_tags if tag.get('href')]
+            file_urls = [gdas_url + tag['href'] for tag in anchor_tags if tag.get('href')]
 
             for file_url in file_urls: 
                 for file_format in self.file_formats:
