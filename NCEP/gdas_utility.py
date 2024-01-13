@@ -66,7 +66,6 @@ class GFSDataProcessor:
                     # Download the file from S3 to the local path
                     self.s3.download_file(self.bucket_name, obj_key, local_file_path)
                     print(f"Downloaded {obj_key} to {local_file_path}")
-        return
     
     def nomads(self, date_str, time_str, local_directory):
         # Construct the URL for the data directory
@@ -98,7 +97,6 @@ class GFSDataProcessor:
                             print(f"Download completed: {file_url} => {local_file_path}")
                         except subprocess.CalledProcessError as e:
                             print(f"Error downloading {file_url}: {e}")
-        return
         
     def download_data(self):
         # Calculate the number of 6-hour intervals
