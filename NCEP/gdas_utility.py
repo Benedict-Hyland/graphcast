@@ -299,13 +299,12 @@ class GFSDataProcessor:
 
     def remove_downloaded_data(self):
         # Remove downloaded data from the specified directory
-        if self.download_directory is not None:
-            print("Removing downloaded data...")
-            try:
-                os.system(f"rm -rf {self.download_directory}")
-                print("Downloaded data removed.")
-            except Exception as e:
-                print(f"Error removing downloaded data: {str(e)}")
+        print("Removing downloaded grib2 data...")
+        try:
+            os.system(f"rm -rf {self.local_base_directory}")
+            print("Downloaded data removed.")
+        except Exception as e:
+            print(f"Error removing downloaded data: {str(e)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download and process GDAS data")
