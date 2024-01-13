@@ -4,6 +4,7 @@ Description
 Revision history:
     -20231010: Sadegh Tabas, initial code
     -20231204: Sadegh Tabas, calculating toa incident solar radiation, parallelizing, updating units, and resolving memory issues
+    -20240112: Sadegh Tabas, (i)removing Pysolar as tisr would be calc through GC, (ii) add NOMADS option for downloading data, (iii) add 37 pressure levels, (iv) configurations for hera
 '''
 import os
 import sys
@@ -15,25 +16,27 @@ from datetime import datetime, timedelta
 from botocore.config import Config
 from botocore import UNSIGNED
 import argparse
-from pysolar.util import extraterrestrial_irrad
-from joblib import Parallel, delayed
-import pytz
-
+import requests
+from bs4 import BeautifulSoup
 
 
 class GFSDataProcessor:
-    def __init__(self, start_datetime, end_datetime, output_directory=None, download_directory=None, keep_downloaded_data=True):
+    def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, download_source='nomads', output_directory=None, download_directory=None, keep_downloaded_data=True):
         self.start_datetime = start_datetime
         self.end_datetime = end_datetime
+        self.num_levels = num_pressure_levels
+        self.download_source = download_source
         self.output_directory = output_directory
         self.download_directory = download_directory
         self.keep_downloaded_data = keep_downloaded_data
 
-        # Initialize the S3 client
-        self.s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
-
-        # Specify the S3 bucket name and root directory
-        self.bucket_name = 'noaa-gfs-bdp-pds'
+        if self.download_source == 's3':
+            # Initialize the S3 client
+            self.s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
+    
+            # Specify the S3 bucket name and root directory
+            self.bucket_name = 'noaa-gfs-bdp-pds'
+        
         self.root_directory = 'gdas'
 
         # Specify the local directory where you want to save the files
@@ -44,7 +47,57 @@ class GFSDataProcessor:
 
         # List of file formats to download
         self.file_formats = ['0p25.f000', '0p25.f006'] # , '0p25.f001'
+    
+    def s3bucket(self, date_str, time_str, local_directory):
+        # Construct the S3 prefix for the directory
+        s3_prefix = f"{self.root_directory}.{date_str}/{time_str}/"
+        # List objects in the S3 directory
+        s3_objects = self.s3.list_objects_v2(Bucket=self.bucket_name, Prefix=s3_prefix)
 
+        # Filter objects based on the desired formats
+        for obj in s3_objects.get('Contents', []):
+            obj_key = obj['Key']
+            for file_format in self.file_formats:
+                if obj_key.endswith(f'.{file_format}'):
+
+                    # Define the local file path
+                    local_file_path = os.path.join(local_directory, os.path.basename(obj_key))
+
+                    # Download the file from S3 to the local path
+                    self.s3.download_file(self.bucket_name, obj_key, local_file_path)
+                    print(f"Downloaded {obj_key} to {local_file_path}")
+    
+    def nomads(self, date_str, time_str, local_directory):
+        # Construct the URL for the data directory
+        gdas_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/{self.root_directory}.{date_str}/{time_str}/atmos/"
+        
+        # Get the list of files from the URL
+        response = requests.get(gdas_url)
+        if response.status_code == 200:
+            # Parse the HTML content using BeautifulSoup
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Find all anchor tags (links) in the HTML
+            anchor_tags = soup.find_all('a')
+            
+            # Extract file URLs from href attributes of anchor tags
+            file_urls = [gdas_url + tag['href'] for tag in anchor_tags if tag.get('href')]
+
+            for file_url in file_urls: 
+                for file_format in self.file_formats:
+                    if file_url.endswith(f'.{file_format}'):
+                        
+                        # Define the local file path
+                        local_file_path = os.path.join(local_directory, os.path.basename(file_url))
+                        
+                        # Download the file from S3 to the local path
+                        try:
+                            # Run the wget command
+                            subprocess.run(['wget', file_url, '-O', local_file_path], check=True)
+                            print(f"Download completed: {file_url} => {local_file_path}")
+                        except subprocess.CalledProcessError as e:
+                            print(f"Error downloading {file_url}: {e}")
+        
     def download_data(self):
         # Calculate the number of 6-hour intervals
         delta = (self.end_datetime - self.start_datetime)
@@ -55,36 +108,26 @@ class GFSDataProcessor:
         while current_datetime <= self.end_datetime:
             date_str = current_datetime.strftime("%Y%m%d")
             time_str = current_datetime.strftime("%H")
+            
+            # Define the local directory path where the file will be saved
+            local_directory = os.path.join(self.local_base_directory, date_str, time_str)
 
-            # Construct the S3 prefix for the directory
-            s3_prefix = f"{self.root_directory}.{date_str}/{time_str}/"
-
-            # List objects in the S3 directory
-            s3_objects = self.s3.list_objects_v2(Bucket=self.bucket_name, Prefix=s3_prefix)
-
-            # Filter objects based on the desired formats
-            for obj in s3_objects.get('Contents', []):
-                obj_key = obj['Key']
-                for file_format in self.file_formats:
-                    if obj_key.endswith(f'.{file_format}'):
-                        # Define the local directory path where the file will be saved
-                        local_directory = os.path.join(self.local_base_directory, date_str, time_str)
-
-                        # Create the local directory if it doesn't exist
-                        os.makedirs(local_directory, exist_ok=True)
-
-                        # Define the local file path
-                        local_file_path = os.path.join(local_directory, os.path.basename(obj_key))
-
-                        # Download the file from S3 to the local path
-                        self.s3.download_file(self.bucket_name, obj_key, local_file_path)
-                        print(f"Downloaded {obj_key} to {local_file_path}")
+            # Create the local directory if it doesn't exist
+            os.makedirs(local_directory, exist_ok=True)
+            
+            if self.download_source == 's3':
+                self.s3bucket(date_str, time_str, local_directory)
+            else:
+                self.nomads(date_str, time_str, local_directory)
+                
+            
 
             # Move to the next 6-hour interval
             current_datetime += timedelta(hours=6)
 
         print("Download completed.")
 
+    
     def process_data(self):
         # Define the directory where your GRIB2 files are located
         data_directory = self.local_base_directory
@@ -102,21 +145,13 @@ class GFSDataProcessor:
                 ':PRMSL:': {
                     'levels': [':mean sea level:'],
                 },
-                ':VGRD:': {
-                    'levels': [':10 m above ground:'],
-                },
-                ':UGRD:': {
+                ':VGRD|UGRD:': {
                     'levels': [':10 m above ground:'],
                 },
                 ':SPFH|VVEL|VGRD|UGRD|HGT|TMP:': {
                     'levels': [':(50|100|150|200|250|300|400|500|600|700|850|925|1000) mb:'],
                 },
             },
-            #'.f001': {
-            #    ':USWRF:': {
-            #        'levels': [':top of atmosphere:'],
-            #    },
-            #},
             '.f006': {
                 ':LAND:': {
                     'levels': [':surface:'],
@@ -127,6 +162,8 @@ class GFSDataProcessor:
                 },
             }
         }
+        if self.num_levels == 37:
+            variables_to_extract['.f000'][':SPFH|VVEL|VGRD|UGRD|HGT|TMP:']['levels'] = [':(1|2|3|5|7|10|20|30|50|70|100|125|150|175|200|225|250|300|350|400|450|500|550|600|650|700|750|775|800|825|850|875|900|925|950|975|1000) mb:']
 
         # Create an empty list to store the extracted datasets
         extracted_datasets = []
@@ -155,7 +192,7 @@ class GFSDataProcessor:
                                 output_file = f'{variable}_{level}_{date_folder}_{hour}{file_extension}.nc'
 
                                 # Use wgrib2 to extract the variable with level
-                                wgrib2_command = ['wgrib2', '-nc_nlev', '13', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
+                                wgrib2_command = ['wgrib2', '-nc_nlev', f'{self.num_levels}', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
                                 subprocess.run(wgrib2_command, check=True)
 
                                 # Open the extracted netcdf file as an xarray dataset
@@ -163,8 +200,6 @@ class GFSDataProcessor:
 
                                 if variable == '^(597):':
                                     ds['time'] = ds['time'] - np.timedelta64(6, 'h')
-                                #elif variable == ':USWRF:':
-                                #    ds['time'] = ds['time'] - np.timedelta64(1, 'h')
 
                                 # If specified, extract only the first time step
                                 if variable not in [':LAND:', ':HGT:']:
@@ -180,7 +215,6 @@ class GFSDataProcessor:
                                         ds.to_netcdf(output_file)
                                     else:
                                         os.remove(output_file)
-                                
                                 
                                 # Optionally, remove the intermediate GRIB2 file
                                 # os.remove(output_file)
@@ -210,7 +244,6 @@ class GFSDataProcessor:
             'UGRD_10maboveground': '10m_u_component_of_wind',
             'VGRD_10maboveground': '10m_v_component_of_wind',
             'APCP_surface': 'total_precipitation_6hr',
-            #'USWRF_topofatmosphere': 'toa_incident_solar_radiation',
             'HGT': 'geopotential',
             'TMP': 'temperature',
             'SPFH': 'specific_humidity',
@@ -218,33 +251,6 @@ class GFSDataProcessor:
             'UGRD': 'u_component_of_wind',
             'VGRD': 'v_component_of_wind'
         })
-        print("Calculating toa incident solar radiation using PySolar package")
-        # calc toa incident solar radiation using PySolar package
-        latitude = np.array(ds.lat)
-        longitude = np.array(ds.lon)
-        first_step = ds.time[0].values.astype('M8[us]').astype(datetime)
-        dates = [first_step + timedelta(hours=i*6) for i in range(42)]
-
-        # Function to calculate extraterrestrial solar irradiance for a single combination of lat, lon, and time
-        def calculate_irradiance(lat, lon, datetime):
-            return extraterrestrial_irrad(lat, lon, datetime) * 3600
-        # Parallelize the calculations using joblib
-        tisr = np.array(
-            Parallel(n_jobs=-1)(
-                delayed(calculate_irradiance)(lat, lon, pytz.timezone('UTC').localize(date))
-                for date in dates
-                for lat in latitude
-                for lon in longitude
-            )
-        ).reshape(len(dates), len(latitude), len(longitude))
-        
-        tisr_datetimes = np.array(dates, dtype='datetime64[ns]')
-        tisr_data_arr = xr.DataArray(tisr, dims=('time', 'lat', 'lon'),
-                        coords={'time': tisr_datetimes, 'lat': ds.lat, 'lon': ds.lon})
-
-        # Create an xarray dataset from the DataArray
-        tisr_xarr_dataset = xr.Dataset({'toa_incident_solar_radiation': tisr_data_arr}) 
-        ds = xr.merge([ds,tisr_xarr_dataset])
 
         # Assign 'datetime' as coordinates
         ds = ds.assign_coords(datetime=ds.time)
@@ -253,7 +259,6 @@ class GFSDataProcessor:
         ds['lat'] = ds['lat'].astype('float32')
         ds['lon'] = ds['lon'].astype('float32')
         ds['level'] = ds['level'].astype('int32')
-        ds['toa_incident_solar_radiation'] = ds['toa_incident_solar_radiation'].astype('float32')
         
         # Adjust time values relative to the first time step
         ds['time'] = ds['time'] - ds.time[0]
@@ -272,17 +277,14 @@ class GFSDataProcessor:
 
         # Update total_precipitation_6hr unit to (m) from (kg/m^2) by dividing it by 1000kg/m³
         ds['total_precipitation_6hr'] = ds['total_precipitation_6hr'] / 1000
-
-        ## Update USWRF (w/m^2), to be used as ERA5 toa_incident_solar_radiation (J/m^2); ( x 3600s)
-        #ds['toa_incident_solar_radiation'] = ds['toa_incident_solar_radiation'] * 3600
         
         # Define the output NetCDF file
         date = (self.start_datetime + timedelta(hours=6)).strftime('%Y%m%d%H')
-        steps = str(len(ds['time'])-2)
+        steps = str(len(ds['time']))
 
         if self.output_directory is None:
             self.output_directory = os.getcwd()  # Use current directory if not specified
-        output_netcdf = os.path.join(self.output_directory, f"source-gdas_date-{date}_res-0.25_levels-13_steps-{steps}.nc")
+        output_netcdf = os.path.join(self.output_directory, f"source-gdas_date-{date}_res-0.25_levels-{self.num_levels}_steps-{steps}.nc")
 
         # Save the merged dataset as a NetCDF file
         ds.to_netcdf(output_netcdf)
@@ -293,22 +295,23 @@ class GFSDataProcessor:
         if not self.keep_downloaded_data:
             self.remove_downloaded_data()
 
-        print("Processing completed.")
+        print(f"Process completed successfully, your inputs for GraphCast model generated at:\n {output_netcdf}")
 
     def remove_downloaded_data(self):
         # Remove downloaded data from the specified directory
-        if self.download_directory is not None:
-            print("Removing downloaded data...")
-            try:
-                os.system(f"rm -rf {self.download_directory}")
-                print("Downloaded data removed.")
-            except Exception as e:
-                print(f"Error removing downloaded data: {str(e)}")
+        print("Removing downloaded grib2 data...")
+        try:
+            os.system(f"rm -rf {self.local_base_directory}")
+            print("Downloaded data removed.")
+        except Exception as e:
+            print(f"Error removing downloaded data: {str(e)}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Download and process GFS data")
+    parser = argparse.ArgumentParser(description="Download and process GDAS data")
     parser.add_argument("start_datetime", help="Start datetime in the format 'YYYYMMDDHH'")
     parser.add_argument("end_datetime", help="End datetime in the format 'YYYYMMDDHH'")
+    parser.add_argument("-l", "--levels", help="number of pressure levels, options: 13, 37", default="13")
+    parser.add_argument("-s", "--source", help="the source repository to download gdas grib2 data, options: nomads (up-to-date), s3", default="nomads")
     parser.add_argument("-o", "--output", help="Output directory for processed data")
     parser.add_argument("-d", "--download", help="Download directory for raw data")
     parser.add_argument("-k", "--keep", help="Keep downloaded data (yes or no)", default="yes")
@@ -317,10 +320,12 @@ if __name__ == "__main__":
 
     start_datetime = datetime.strptime(args.start_datetime, "%Y%m%d%H")
     end_datetime = datetime.strptime(args.end_datetime, "%Y%m%d%H")
+    num_pressure_levels = int(args.levels)
+    download_source = args.source
     output_directory = args.output
     download_directory = args.download
     keep_downloaded_data = args.keep.lower() == "yes"
 
-    data_processor = GFSDataProcessor(start_datetime, end_datetime, output_directory, download_directory, keep_downloaded_data)
+    data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, download_source, output_directory, download_directory, keep_downloaded_data)
     data_processor.download_data()
     data_processor.process_data()
