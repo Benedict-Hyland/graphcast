@@ -280,7 +280,7 @@ class GFSDataProcessor:
         
         # Define the output NetCDF file
         date = (self.start_datetime + timedelta(hours=6)).strftime('%Y%m%d%H')
-        steps = str(len(ds['time'])-2)
+        steps = str(len(ds['time']))
 
         if self.output_directory is None:
             self.output_directory = os.getcwd()  # Use current directory if not specified
