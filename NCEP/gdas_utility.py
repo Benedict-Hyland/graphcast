@@ -297,7 +297,7 @@ class GFSDataProcessor:
         if not self.keep_downloaded_data:
             self.remove_downloaded_data()
 
-        print("Processing completed.")
+        print(f"Process completed successfully, your inputs for GraphCast model generated at:\n {output_netcdf}")
 
     def remove_downloaded_data(self):
         # Remove downloaded data from the specified directory
