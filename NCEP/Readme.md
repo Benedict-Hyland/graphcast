@@ -26,8 +26,6 @@ conda activate mlwp
 pip install dm-tree
 pip install boto3
 pip install xarray
-pip install pysolar
-pip install joblib
 pip install netcdf4
 conda install --channel conda-forge cartopy
 pip install --upgrade https://github.com/deepmind/graphcast/archive/master.zip
