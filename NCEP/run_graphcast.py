@@ -146,9 +146,9 @@ class GraphCastModel:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run GraphCast model.")
-    parser.add_argument("-i", "--input", help="input file directory", required=True)
-    parser.add_argument("-o", "--output", help="output file name and directory", required=True)
-    parser.add_argument("-l", "--length", help="length of forecast (6-hourly), an integer number in the range [1, 40]", required=True)
+    parser.add_argument("-i", "--input", help="input file path", required=True)
+    parser.add_argument("-o", "--output", help="output file path (including file name)", required=True)
+    parser.add_argument("-l", "--length", help="length of forecast (6-hourly), an integer number in range [1, 40]", required=True)
     
     args = parser.parse_args()
 
