@@ -314,7 +314,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--source", help="the source repository to download gdas grib2 data, options: nomads (up-to-date), s3", default="nomads")
     parser.add_argument("-o", "--output", help="Output directory for processed data")
     parser.add_argument("-d", "--download", help="Download directory for raw data")
-    parser.add_argument("-k", "--keep", help="Keep downloaded data (yes or no)", default="yes")
+    parser.add_argument("-k", "--keep", help="Keep downloaded data (yes or no)", default="no")
 
     args = parser.parse_args()
 
