@@ -3,6 +3,7 @@ Description: Script to call the graphcast model using gdas products
 Author: Sadegh Sadeghi Tabas (sadegh.tabas@noaa.gov)
 Revision history:
     -20231218: Sadegh Tabas, initial code
+    -20240118: Sadegh Tabas, S3 bucket module to upload data, adding forecast length
 '''
 import argparse
 import dataclasses
