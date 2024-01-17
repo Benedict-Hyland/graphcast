@@ -53,7 +53,22 @@ class GraphCastModel:
         self.current_batch = xarray.load_dataset(gdas_data_path).compute()
         
         if (forecast_length + 2) != len(self.current_batch['time']):
-            pass
+            print('Updating batch dataset to account for forecast length')
+            
+            diff = int(forecast_length + 2 - len(self.current_batch['time']))
+            ds = self.current_batch
+
+            # time and datetime update
+            curr_time_range = ds['time'].values.astype('timedelta64[ns]')
+            new_time_range = (np.arange(len(curr_time_range) + diff) * np.timedelta64(6, 'h')).astype('timedelta64[ns]')
+            ds = ds.reindex(time = new_time_range)
+            curr_datetime_range = ds['datetime'][0].values.astype('datetime64[ns]')
+            new_datetime_range = curr_datetime_range[0] + np.arange(len(curr_time_range) + diff) * np.timedelta64(6, 'h')
+            ds['datetime'][0]= new_datetime_range
+
+            self.current_batch = ds
+            print('batch dataset updated')
+            
             
         
     def extract_inputs_targets_forcings(self):
