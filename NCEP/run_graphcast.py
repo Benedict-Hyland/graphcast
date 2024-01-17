@@ -74,7 +74,7 @@ class GraphCastModel:
     def extract_inputs_targets_forcings(self, forecast_length = 40):
         """Extract inputs, targets, and forcings from the loaded data."""
         self.inputs, self.targets, self.forcings = data_utils.extract_inputs_targets_forcings(
-            self.current_batch, target_lead_times=slice("6h", f"{40*6}h"), **dataclasses.asdict(self.task_config)
+            self.current_batch, target_lead_times=slice("6h", f"{forecast_length*6}h"), **dataclasses.asdict(self.task_config)
         )
 
     def load_normalization_stats(self, diffs_stddev_path, mean_path, stddev_path):
