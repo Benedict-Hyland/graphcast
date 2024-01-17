@@ -129,9 +129,10 @@ class GraphCastModel:
         self.model = self._drop_state(self._with_params(jax.jit(self._with_configs(run_forward.apply))))
     
  
-    def get_predictions(self, fname):
+    def get_predictions(self, fname, forecast_length):
         """Run GraphCast and save forecasts to a NetCDF file."""
-        
+
+        print (f"start running GraphCast for {forecast_length} steps --> {forecast_length*6} hours.")
         self.load_model()
             
         # output = self.model(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
@@ -140,7 +141,7 @@ class GraphCastModel:
         # save forecasts
         forecasts.to_netcdf(f"{fname}")
 
-
+        print (f"GraphCast run completed successfully, you can find the GraphCast forecasts at the following directory:\n {fname}")
 
 
 if __name__ == "__main__":
@@ -160,4 +161,4 @@ if __name__ == "__main__":
         "/contrib/graphcast/NCEP/stats/mean_by_level.nc", 
         "/contrib/graphcast/NCEP/stats/stddev_by_level.nc"
     )
-    runner.get_predictions(args.output)
+    runner.get_predictions(args.output, args.length)
