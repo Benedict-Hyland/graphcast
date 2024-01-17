@@ -52,7 +52,7 @@ class GraphCastModel:
         #    self.current_batch = xarray.load_dataset(f).compute()
         self.current_batch = xarray.load_dataset(gdas_data_path).compute()
         
-        if (forecast_length + 2) != len(self.current_batch['time']):
+        if (forecast_length + 2) > len(self.current_batch['time']):
             print('Updating batch dataset to account for forecast length')
             
             diff = int(forecast_length + 2 - len(self.current_batch['time']))
