@@ -46,7 +46,7 @@ class GraphCastModel:
             self.model_config = ckpt.model_config
             self.task_config = ckpt.task_config
 
-    def load_gdas_data(self, gdas_data_path):
+    def load_gdas_data(self, gdas_data_path, forecast_length = 40):
         """Load GDAS data."""
         #with open(gdas_data_path, "rb") as f:
         #    self.current_batch = xarray.load_dataset(f).compute()
@@ -129,11 +129,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run GraphCast model.")
     parser.add_argument("-i", "--input", help="input file directory", required=True)
     parser.add_argument("-o", "--output", help="output file name and directory", required=True)
+    parser.add_argument("-l", "--length", help="length of forecast (6-hourly), an integer number in the range [1, 40]", required=True)
+    
     args = parser.parse_args()
 
     runner = GraphCastModel()
     runner.load_pretrained_model("/contrib/graphcast/NCEP/params/GraphCast_operational - ERA5-HRES 1979-2021 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz")
-    runner.load_gdas_data(args.input)
+    runner.load_gdas_data(args.input, args.length)
     runner.extract_inputs_targets_forcings()
     runner.load_normalization_stats(
         "/contrib/graphcast/NCEP/stats/diffs_stddev_by_level.nc", 
