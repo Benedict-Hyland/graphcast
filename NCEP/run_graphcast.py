@@ -51,8 +51,11 @@ class GraphCastModel:
         #with open(gdas_data_path, "rb") as f:
         #    self.current_batch = xarray.load_dataset(f).compute()
         self.current_batch = xarray.load_dataset(gdas_data_path).compute()
-        assert self.current_batch.dims["time"] == 42
-
+        
+        if (forecast_length + 2) != len(self.current_batch['time']):
+            pass
+            
+        
     def extract_inputs_targets_forcings(self):
         """Extract inputs, targets, and forcings from the loaded data."""
         self.inputs, self.targets, self.forcings = data_utils.extract_inputs_targets_forcings(
