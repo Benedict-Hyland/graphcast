@@ -119,15 +119,15 @@ class GraphCastModel:
         forecasts = rollout.chunked_prediction(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
         
         # save forecasts
-        forecasts.to_netcdf(f"forecasts/gc_forecasts_{fname}.nc")
+        forecasts.to_netcdf(f"{fname}")
 
 
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run GraphCast prediction.")
-    parser.add_argument("-i", "--input", help="Input filename", required=True)
-    parser.add_argument("-o", "--output", help="Output filename", required=True)
+    parser = argparse.ArgumentParser(description="Run GraphCast model.")
+    parser.add_argument("-i", "--input", help="input file directory", required=True)
+    parser.add_argument("-o", "--output", help="output file name and directory", required=True)
     args = parser.parse_args()
 
     runner = GraphCastModel()
