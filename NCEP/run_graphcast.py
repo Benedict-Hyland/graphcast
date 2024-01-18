@@ -141,7 +141,7 @@ class GraphCastModel:
         # save forecasts
         forecasts.to_netcdf(f"{fname}")
 
-        print (f"GraphCast run completed successfully, you can find the GraphCast forecasts at the following directory:\n {fname}")
+        print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
 
 
 if __name__ == "__main__":
