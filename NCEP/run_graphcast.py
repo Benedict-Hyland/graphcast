@@ -149,6 +149,7 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--input", help="input file path", required=True)
     parser.add_argument("-o", "--output", help="output file path (including file name)", required=True)
     parser.add_argument("-l", "--length", help="length of forecast (6-hourly), an integer number in range [1, 40]", required=True)
+    parser.add_argument("-u", "--upload", help="upload input data as well as forecasts to noaa s3 bucket", required=True)
     
     args = parser.parse_args()
 
@@ -162,3 +163,4 @@ if __name__ == "__main__":
         "/contrib/graphcast/NCEP/stats/stddev_by_level.nc"
     )
     runner.get_predictions(args.output, int(args.length))
+    runner.upload_to_s3(args.upload)
