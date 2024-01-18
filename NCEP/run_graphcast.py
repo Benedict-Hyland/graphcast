@@ -154,11 +154,11 @@ if __name__ == "__main__":
 
     runner = GraphCastModel()
     runner.load_pretrained_model("/contrib/graphcast/NCEP/params/GraphCast_operational - ERA5-HRES 1979-2021 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz")
-    runner.load_gdas_data(args.input, args.length)
-    runner.extract_inputs_targets_forcings(args.length)
+    runner.load_gdas_data(args.input, int(args.length))
+    runner.extract_inputs_targets_forcings(int(args.length))
     runner.load_normalization_stats(
         "/contrib/graphcast/NCEP/stats/diffs_stddev_by_level.nc", 
         "/contrib/graphcast/NCEP/stats/mean_by_level.nc", 
         "/contrib/graphcast/NCEP/stats/stddev_by_level.nc"
     )
-    runner.get_predictions(args.output, args.length)
+    runner.get_predictions(args.output, int(args.length))
