@@ -143,6 +143,9 @@ class GraphCastModel:
 
         print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
 
+    def upload_to_s3(self, upload="no"):
+        pass
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run GraphCast model.")
