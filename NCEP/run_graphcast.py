@@ -143,7 +143,7 @@ class GraphCastModel:
 
         print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
 
-    def upload_to_s3(self, upload="no"):
+    def upload_to_s3(self, upload="no", keep="no"):
         pass
 
 
@@ -153,6 +153,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", help="output file path (including file name)", required=True)
     parser.add_argument("-l", "--length", help="length of forecast (6-hourly), an integer number in range [1, 40]", required=True)
     parser.add_argument("-u", "--upload", help="upload input data as well as forecasts to noaa s3 bucket (yes or no)", default = "no")
+    parser.add_argument("-k", "--keep", help="keep input and output after uploading to noaa s3 bucket (yes or no)", default = "no")
     
     args = parser.parse_args()
 
@@ -166,4 +167,4 @@ if __name__ == "__main__":
         "/contrib/graphcast/NCEP/stats/stddev_by_level.nc"
     )
     runner.get_predictions(args.output, int(args.length))
-    runner.upload_to_s3(args.upload)
+    runner.upload_to_s3(args.upload, args.keep)
