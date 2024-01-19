@@ -7,7 +7,6 @@
 #SBATCH --error=gc_error.txt
 #SBATCH --partition=compute
 
-forecast_length=40
 
 # load necessary modules
 module use /contrib/spack-stack/envs/ufswm/install/modulefiles/Core/
@@ -34,6 +33,9 @@ prev_datetime=$( date -d "$datetime 18 hour ago" "+%Y%m%d%H" )
 
 echo "Current state: $curr_datetime"
 echo "6 hours earlier state: $prev_datetime"
+
+forecast_length=40
+echo "forecast length: $forecast_length"
 
 # Set Miniconda path
 #export PATH="/contrib/Sadegh.Tabas/miniconda3/bin:$PATH"
