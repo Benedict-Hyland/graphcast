@@ -146,6 +146,7 @@ class GraphCastModel:
 
         print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
 
+    
     def upload_to_s3(self, input_file, output_file, delete_files=False):
         s3 = boto3.client('s3')
 
