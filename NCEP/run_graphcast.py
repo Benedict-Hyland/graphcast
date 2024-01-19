@@ -38,6 +38,7 @@ class GraphCastModel:
         self.inputs = None
         self.targets = None
         self.forcings = None
+        self.s3_bucket_name = noaa-nws-graphcastgfs-pds
 
     def load_pretrained_model(self, pretrained_model_path):
         """Load pre-trained GraphCast model."""
@@ -145,7 +146,8 @@ class GraphCastModel:
 
         print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
 
-    def upload_to_s3(self, upload="no", keep="no"):
+    def upload_to_s3(self, input_file, output_file, upload=False, delete_files=False):
+        
         pass
 
 
