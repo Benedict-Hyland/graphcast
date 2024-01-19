@@ -185,8 +185,9 @@ class GraphCastModel:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run GraphCast model.")
-    parser.add_argument("-i", "--input", help="input file path", required=True)
+    parser.add_argument("-i", "--input", help="input file path (including file name)", required=True)
     parser.add_argument("-o", "--output", help="output file path (including file name)", required=True)
+    parser.add_argument("-w", "--weights", help="parent directory of the graphcast params and stats", required=True)
     parser.add_argument("-l", "--length", help="length of forecast (6-hourly), an integer number in range [1, 40]", required=True)
     parser.add_argument("-u", "--upload", help="upload input data as well as forecasts to noaa s3 bucket (yes or no)", default = "no")
     parser.add_argument("-k", "--keep", help="keep input and output after uploading to noaa s3 bucket (yes or no)", default = "no")
@@ -194,13 +195,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     runner = GraphCastModel()
-    runner.load_pretrained_model("/contrib/graphcast/NCEP/params/GraphCast_operational - ERA5-HRES 1979-2021 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz")
+    runner.load_pretrained_model(f"{args.weights}/params/GraphCast_operational - ERA5-HRES 1979-2021 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz")
     runner.load_gdas_data(args.input, int(args.length))
     runner.extract_inputs_targets_forcings(int(args.length))
     runner.load_normalization_stats(
-        "/contrib/graphcast/NCEP/stats/diffs_stddev_by_level.nc", 
-        "/contrib/graphcast/NCEP/stats/mean_by_level.nc", 
-        "/contrib/graphcast/NCEP/stats/stddev_by_level.nc"
+        f"{args.weights}/stats/diffs_stddev_by_level.nc", 
+        f"{args.weights}/stats/mean_by_level.nc", 
+        f"{args.weights}/stats/stddev_by_level.nc"
     )
     runner.get_predictions(args.output, int(args.length))
     upload_data = args.upload.lower() == "yes"
