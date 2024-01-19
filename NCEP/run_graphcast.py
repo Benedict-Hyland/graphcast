@@ -193,6 +193,6 @@ if __name__ == "__main__":
     )
     runner.get_predictions(args.output, int(args.length))
     upload_data = args.upload.lower() == "yes"
-    keep_data = upload_data = args.keep.lower() == "yes"
+    keep_data = args.keep.lower() == "yes"
     if upload_data:
         runner.upload_to_s3(args.input, args.output, keep_data)
