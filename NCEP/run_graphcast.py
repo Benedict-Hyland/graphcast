@@ -153,6 +153,10 @@ class GraphCastModel:
         date_time_info = input_file.split('_')[2]
         date = date_time_info[:8]
         time = date_time_info[8:10]
+
+        # Define S3 key paths for input and output files
+        input_s3_key = f'graphcastgfs.{date}/{time}/input/{input_file}'
+        output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file}'
         
         pass
 
