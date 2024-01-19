@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=30  # Use all available CPU cores
-#SBATCH --time=3:00:00  # Adjust this to your estimated run time
+#SBATCH --time=4:00:00  # Adjust this to your estimated run time
 #SBATCH --job-name=graphcast
 #SBATCH --output=gc_output.txt
 #SBATCH --error=gc_error.txt
