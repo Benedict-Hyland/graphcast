@@ -123,31 +123,16 @@ python3 run_graphcast.py  -i /path/to/input -o /path/to/output -w /path/to/graph
 
 ## Run GraphCast Through Cronjob
 
-Submit the `graphcast_job_[machine_name].sh` to run GraphCast in real-time (every 6 hours) through cronjob.
+Submit the `graphcast_job.sh` to run `graphcast_job_[machine_name].sh` and get GraphCast results in real-time (every 6 hours) through cronjob.
 
 ```bash
-sbatch graphcast_job_[machine_name].sh
+sbatch graphcast_job.sh
 ```
-
-
-3. Optional: Specify additional options (see [Options](#options)).
-
-## Options
-
-The `gdas_utility.py` supports the following optional command-line arguments:
-
-- `-o, --output-dir <output_directory>`: Specify the directory to save the processed data (default: "./output/").
-- `-d, --download-dir <download_directory>`: Specify the directory to save downloaded data (default: "./data/").
-- `-k, --keep-data <yes/no>`: Specify whether to keep downloaded data after processing (default: "yes").
-- `-h, --help`: Display help information.
-
-
-
 
 ## Output
 
-The processed GDAS data as well as GraphCast forecasts will be saved in NetCDF format in the output and forecast directories specified. The files will be named based on the date.
+The processed GDAS data as well as GraphCast forecasts will be saved in NetCDF format in the related directories (uploading to NOAA S3 bucket option is also provided for both input and output files). The files will be named based on the date.
 
-
+## Contact
 
 For questions or issues, please contact [Sadegh.Tabas@noaa.gov](mailto:Sadegh.Tabas@noaa.gov).
