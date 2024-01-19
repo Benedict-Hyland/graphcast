@@ -52,7 +52,7 @@ To download and prepare GDAS data, use the following command:
 
    `python3 gdas_utility.py yyyymmddhh yyyymmddhh --level 13 --source s3 --output /directory/to/output --download /directory/to/download --keep no`
 
-### Arguments:
+#### Arguments:
 
 - yyyymmddhh: Start datetime
 - yyyymmddhh: End datetime
