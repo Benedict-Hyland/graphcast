@@ -15,6 +15,7 @@ module load wgrib2
 module load awscli
 module list
 
+
 # Get the UTC hour and calculate the time in the format yyyymmddhh
 current_hour=$(date -u +%H)
 if (( $current_hour >= 0 && $current_hour < 6 )); then
@@ -34,6 +35,9 @@ prev_datetime=$( date -d "$datetime 18 hour ago" "+%Y%m%d%H" )
 
 echo "Current state: $curr_datetime"
 echo "6 hours earlier state: $prev_datetime"
+
+forecast_length=40
+echo "forecast length: $forecast_length"
 
 # Activate Conda environment
 source /scratch1/NCEPDEV/nems/AIML/miniconda3/etc/profile.d/conda.sh
