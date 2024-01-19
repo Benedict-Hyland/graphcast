@@ -52,10 +52,17 @@ To download and prepare GDAS data, use the following command:
 
    `python3 gdas_utility.py yyyymmddhh yyyymmddhh --level 13 --source s3 --output /directory/to/output --download /directory/to/download --keep no`
 
-#### Arguments:
+#### Arguments (required):
 
-- yyyymmddhh: Start datetime
-- yyyymmddhh: End datetime
+- `yyyymmddhh`: Start datetime
+- `yyyymmddhh`: End datetime
+
+#### Arguments (optional):
+- `-l or --level`: [13, 37], represents the number of pressure levels (default: 13)
+- `-s or --source`: [s3, nomads], represents the source to download GDAS data (default: "nomads")
+- `-o or --output`: /directory/to/output, represents the directory to output netcdf file (default: "current directory")
+- `-d or --download`: /directory/to/download, represents the download directory for grib2 files (default: "current directory")
+- `-k or --keep`: [yes, no], specifies whether to keep downloaded data after processing (default: "no")
 
 
 3. Submit the `graphcast_job.sh` to run for the most recent forecasts or run the above scripts with the desired start and end datetime (in "YYYYMMDDHH" format).
