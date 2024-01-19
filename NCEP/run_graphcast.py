@@ -146,7 +146,7 @@ class GraphCastModel:
 
         print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
 
-    def upload_to_s3(self, input_file, output_file, upload=False, delete_files=False):
+    def upload_to_s3(self, input_file, output_file, delete_files=False):
         s3 = boto3.client('s3')
 
         # Extract date and time information from the input file name
@@ -159,17 +159,17 @@ class GraphCastModel:
         output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file}'
 
         # Upload input file to S3
-        s3.upload_file(input_file, s3_bucket, input_s3_key)
+        s3.upload_file(input_file, self.s3_bucket, input_s3_key)
     
         # Upload output file to S3
-        s3.upload_file(output_file, s3_bucket, output_s3_key)
+        s3.upload_file(output_file, self.s3_bucket, output_s3_key)
 
         # Delete local files if delete_files is True
         if delete_files:
             os.remove(input_file)
             os.remove(output_file)
-            print("Local files deleted.")
-        pass
+            print("Local input and output files deleted.")
+        
 
 
 if __name__ == "__main__":
@@ -192,4 +192,7 @@ if __name__ == "__main__":
         "/contrib/graphcast/NCEP/stats/stddev_by_level.nc"
     )
     runner.get_predictions(args.output, int(args.length))
-    runner.upload_to_s3(args.upload, args.keep)
+    upload_data = args.upload.lower() == "yes"
+    keep_data = upload_data = args.keep.lower() == "yes"
+    if upload_data:
+        runner.upload_to_s3(args.input, args.output, keep_data)
