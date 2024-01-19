@@ -12,7 +12,6 @@ This repository provides scripts to run real-time GraphCast using GDAS products 
   - [GDAS Utility](#gdas-utility)
   - [Run GraphCast](#run-graphcast)
   - [Run GraphCast Through Cronjob](#run-graphcast-through-cronjob)
-- [Options](#options)
 - [Output](#output)
 - [Contact](#contact)
 
