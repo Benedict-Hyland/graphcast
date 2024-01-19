@@ -159,10 +159,10 @@ class GraphCastModel:
         output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file}'
 
         # Upload input file to S3
-        s3.upload_file(input_file, self.s3_bucket, input_s3_key)
+        s3.upload_file(input_file, self.s3_bucket_name, input_s3_key)
     
         # Upload output file to S3
-        s3.upload_file(output_file, self.s3_bucket, output_s3_key)
+        s3.upload_file(output_file, self.s3_bucket_name, output_s3_key)
 
         # Delete local files if delete_files is True
         if delete_files:
