@@ -163,6 +163,12 @@ class GraphCastModel:
     
         # Upload output file to S3
         s3.upload_file(output_file, s3_bucket, output_s3_key)
+
+        # Delete local files if delete_files is True
+        if delete_files:
+            os.remove(input_file)
+            os.remove(output_file)
+            print("Local files deleted.")
         pass
 
 
