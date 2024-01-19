@@ -1,11 +1,12 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=30  # Use all available CPU cores
-#SBATCH --time=1:30:00  # Adjust this to your estimated run time
+#SBATCH --account=nems
+#SBATCH --qos=@[QUEUE]
+#SBATCH --cpus-per-task=1  # Use all available CPU cores
+#SBATCH --time=3:00:00  # Adjust this to your estimated run time
 #SBATCH --job-name=graphcast
 #SBATCH --output=gc_output.txt
 #SBATCH --error=gc_error.txt
-#SBATCH --partition=compute
 
 
 # load necessary modules
@@ -27,9 +28,9 @@ else
 fi
 
 # Calculate time 6 hours before
-curr_datetime=$(date -u -d "$time" +'%Y%m%d%H')
-#curr_datetime=$( date -d "$datetime 12 hour ago" "+%Y%m%d%H" )
-prev_datetime=$( date -d "$datetime 6 hour ago" "+%Y%m%d%H" )
+#curr_datetime=$(date -u -d "$time" +'%Y%m%d%H')
+curr_datetime=$( date -d "$datetime 12 hour ago" "+%Y%m%d%H" )
+prev_datetime=$( date -d "$datetime 18 hour ago" "+%Y%m%d%H" )
 
 echo "Current state: $curr_datetime"
 echo "6 hours earlier state: $prev_datetime"
