@@ -40,11 +40,23 @@ Additionally, the utility uses the `wgrib2` library for extracting specific vari
 
 To use the utility, follow these steps:
 
-1. Clone this repository:
+Clone the NOAA-EMC GraphCast repository:
    
    `git clone https://github.com/NOAA-EMC/graphcast.git`
    
    `cd graphcast/NCEP`
+
+## GDAS Utility
+
+To download and prepare GDAS data, use the following command:
+
+   `python3 gdas_utility.py yyyymmddhh yyyymmddhh --level 13 --source s3 --output /directory/to/output --download /directory/to/download --keep no`
+
+### Arguments:
+
+- yyyymmddhh: Start datetime
+- yyyymmddhh: End datetime
+
 
 3. Submit the `graphcast_job.sh` to run for the most recent forecasts or run the above scripts with the desired start and end datetime (in "YYYYMMDDHH" format).
 
