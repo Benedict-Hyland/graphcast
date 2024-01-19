@@ -157,7 +157,12 @@ class GraphCastModel:
         # Define S3 key paths for input and output files
         input_s3_key = f'graphcastgfs.{date}/{time}/input/{input_file}'
         output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file}'
-        
+
+        # Upload input file to S3
+        s3.upload_file(input_file, s3_bucket, input_s3_key)
+    
+        # Upload output file to S3
+        s3.upload_file(output_file, s3_bucket, output_s3_key)
         pass
 
 
