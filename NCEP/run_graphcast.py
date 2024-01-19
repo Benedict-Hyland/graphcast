@@ -14,6 +14,8 @@ import haiku as hk
 import jax
 import numpy as np
 import xarray
+import boto3
+import os
 
 from graphcast import autoregressive
 from graphcast import casting
