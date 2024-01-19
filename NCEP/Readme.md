@@ -122,11 +122,11 @@ python3 run_graphcast.py  -i /path/to/input -o /path/to/output -w /path/to/graph
 
 ## Run GraphCast Through Cronjob
 
-Submit the `graphcast_job.sh` to run `graphcast_job_[machine_name].sh` and get GraphCast results in real-time (every 6 hours) through cronjob.
+Submit the `graphcast_job_[machine_name].sh` to run GraphCast and get real-time (every 6 hours) forecasts through cronjob.
 
 ```bash
 # Example CronJob to run GraphCast every 6 hours
-0 */6 * * * /path/to/graphcast_job.sh
+0 */6 * * * /path/to/graphcast_job_[machine_name].sh
 ```
 
 ## Output
