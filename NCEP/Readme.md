@@ -115,7 +115,7 @@ python3 run_graphcast.py --input /path/to/input/file --output /path/to/output/fi
 - `-u or --upload`: [yes, no], option for uploading the input and output files to NOAA S3 bucket [noaa-nws-graphcastgfs-pds] (default: "no")
 - `-k or --keep`: [yes, no], specifies whether to keep input and output files after uploading to NOAA S3 bucket (default: "no")
 
-Example usage with options:
+Example usage with options (1-day forecast):
 
 ```bash
 python3 run_graphcast.py  -i /path/to/input -o /path/to/output -w /path/to/graphcast/weights -l 4
