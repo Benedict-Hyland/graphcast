@@ -1,9 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --account=nems
-#SBATCH --qos=@[QUEUE]
-#SBATCH --cpus-per-task=1  # Use all available CPU cores
-#SBATCH --time=3:00:00  # Adjust this to your estimated run time
+#SBATCH --cpus-per-task=1 
+#SBATCH --time=3:00:00 
 #SBATCH --job-name=graphcast
 #SBATCH --output=gc_output.txt
 #SBATCH --error=gc_error.txt
