@@ -29,8 +29,8 @@ fi
 
 # Calculate time 6 hours before
 #curr_datetime=$(date -u -d "$time" +'%Y%m%d%H')
-curr_datetime=$( date -d "$datetime 6 hour ago" "+%Y%m%d%H" )
-prev_datetime=$( date -d "$datetime 12 hour ago" "+%Y%m%d%H" )
+curr_datetime=$( date -d "$datetime 12 hour ago" "+%Y%m%d%H" )
+prev_datetime=$( date -d "$datetime 18 hour ago" "+%Y%m%d%H" )
 
 echo "Current state: $curr_datetime"
 echo "6 hours earlier state: $prev_datetime"
@@ -45,7 +45,7 @@ conda activate mlwp
 start_time=$(date +%s)
 echo "start runing gdas utility to generate graphcast inputs for: $curr_datetime"
 # Run the Python script gdas.py with the calculated times
-python3 gdas_utility.py "$prev_datetime" "$curr_datetime" -k no
+python3 gdas_utility.py "$prev_datetime" "$curr_datetime" -s s3 -k no
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 
