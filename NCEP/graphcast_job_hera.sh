@@ -48,7 +48,7 @@ conda activate mlwp
 start_time=$(date +%s)
 echo "start runing gdas utility to generate graphcast inputs for: $curr_datetime"
 # Run the Python script gdas.py with the calculated times
-python3 gdas_utility.py "$prev_datetime" "$curr_datetime" -k no
+python3 gdas_utility.py "$prev_datetime" "$curr_datetime"
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 
