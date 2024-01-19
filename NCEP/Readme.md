@@ -65,6 +65,15 @@ To download and prepare GDAS data, use the following command:
 - `-d or --download`: /directory/to/download, represents the download directory for grib2 files (default: "current directory")
 - `-k or --keep`: [yes, no], specifies whether to keep downloaded data after processing (default: "no")
 
+Example usage with options:
+
+   `python3 gdas_utility.py 2023060600 2023060606 -o /path/to/output -d /path/to/download`
+
+Note: 
+- The 37 pressure levels option is still under development.
+- GraphCast only needs 2 states for initialization, however, gdas_utility can provide longer outputs for evaluation of the model (e.g., 10-days).
+
+   
 ## Run GraphCast
 
 To run GraphCast, use the following command:
@@ -83,15 +92,12 @@ To run GraphCast, use the following command:
 - `-u or --upload`: [yes, no], option for uploading the input and output files to NOAA S3 bucket [noaa-nws-graphcastgfs-pds] (default: "no")
 - `-k or --keep`: [yes, no], specifies whether to keep input and output files after uploading to NOAA S3 bucket (default: "no")
 
+## Run GraphCast Through Cronjob
 
-
-
-
-
-
-3. Submit the `graphcast_job.sh` to run for the most recent forecasts or run the above scripts with the desired start and end datetime (in "YYYYMMDDHH" format).
+Submit the `graphcast_job_[machine_name].sh` to run GraphCast in real-time (every 6 hours) through cronjob.
 
    `sbatch graphcast_job.sh`
+
 
 
 3. Optional: Specify additional options (see [Options](#options)).
@@ -105,9 +111,7 @@ The `gdas_utility.py` supports the following optional command-line arguments:
 - `-k, --keep-data <yes/no>`: Specify whether to keep downloaded data after processing (default: "yes").
 - `-h, --help`: Display help information.
 
-Example usage with options:
 
-   `python gdas_utility.py 2023060600 2023060712 -o /path/to/output -d /path/to/download -k no`
 
 
 ## Output
