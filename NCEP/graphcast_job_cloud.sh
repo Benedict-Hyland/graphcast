@@ -1,12 +1,13 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=30  # Use all available CPU cores
-#SBATCH --time=1:30:00  # Adjust this to your estimated run time
+#SBATCH --cpus-per-task=1  # Use all available CPU cores
+#SBATCH --time=2:00:00  # Adjust this to your estimated run time
 #SBATCH --job-name=graphcast
 #SBATCH --output=gc_output.txt
 #SBATCH --error=gc_error.txt
 #SBATCH --partition=compute
 
+forecast_length=40
 
 # load necessary modules
 module use /contrib/spack-stack/envs/ufswm/install/modulefiles/Core/
@@ -35,7 +36,7 @@ echo "Current state: $curr_datetime"
 echo "6 hours earlier state: $prev_datetime"
 
 # Set Miniconda path
-export PATH="/contrib/Sadegh.Tabas/miniconda3/bin:$PATH"
+#export PATH="/contrib/Sadegh.Tabas/miniconda3/bin:$PATH"
 
 # Activate Conda environment
 source /contrib/Sadegh.Tabas/miniconda3/etc/profile.d/conda.sh
@@ -55,7 +56,7 @@ echo "Execution time for gdas_utility.py: $execution_time seconds"
 start_time=$(date +%s)
 echo "start runing graphcast to get real time 10-days forecasts for: $curr_datetime"
 # Run another Python script
-python3 run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-13_steps-2.nc -o "$curr_datetime"
+python3 run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-13_steps-2.nc -o forecast_date-"$curr_datetime"_res-0.25_levels-13_steps-"$forecast_length".nc -w /contrib/graphcast/NCEP -l "$forecast_length" -u yes -k no
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 
