@@ -58,11 +58,35 @@ To download and prepare GDAS data, use the following command:
 - `yyyymmddhh`: End datetime
 
 #### Arguments (optional):
+
 - `-l or --level`: [13, 37], represents the number of pressure levels (default: 13)
 - `-s or --source`: [s3, nomads], represents the source to download GDAS data (default: "nomads")
 - `-o or --output`: /directory/to/output, represents the directory to output netcdf file (default: "current directory")
 - `-d or --download`: /directory/to/download, represents the download directory for grib2 files (default: "current directory")
 - `-k or --keep`: [yes, no], specifies whether to keep downloaded data after processing (default: "no")
+
+## Run GraphCast
+
+To run GraphCast, use the following command:
+
+  `python3 run_graphcast.py --input /path/to/input/file --output /path/to/output/file --weights /path/to/graphcast/weights --length forecast_length --upload yes --keep no`
+
+#### Arguments (required):
+
+- `-i or --input`: /path/to/input/file, represents the path to input netcdf file (including file name and extension)
+- `-o or --output`: /path/to/output/file, represents the path to output netcdf file (including file name and extension)
+- `-w or --weights`: /path/to/graphcast/weights, represents the path to the parent directory of the graphcast params (weights) and stats from the pre-trained model
+- `-l or --length`: An integer number in the range [1, 40], represents the number of forecasts time steps (6-hourly; e.g., 40 → 10-days)
+
+#### Arguments (optional):
+
+- `-u or --upload`: [yes, no], option for uploading the input and output files to NOAA S3 bucket [noaa-nws-graphcastgfs-pds] (default: "no")
+- `-k or --keep`: [yes, no], specifies whether to keep input and output files after uploading to NOAA S3 bucket (default: "no")
+
+
+
+
+
 
 
 3. Submit the `graphcast_job.sh` to run for the most recent forecasts or run the above scripts with the desired start and end datetime (in "YYYYMMDDHH" format).
