@@ -11,6 +11,7 @@ This repository provides scripts to run real-time GraphCast using GDAS products 
 - [Usage](#usage)
   - [GDAS Utility](#gdas-utility)
   - [Run GraphCast](#run-graphcast)
+  - [Run GraphCast Through Cronjob] (#run-graphcast-through-cronjob)
 - [Options](#options)
 - [Output](#output)
 - [Contact](#contact)
@@ -41,16 +42,19 @@ Additionally, the utility uses the `wgrib2` library for extracting specific vari
 To use the utility, follow these steps:
 
 Clone the NOAA-EMC GraphCast repository:
-   
-   `git clone https://github.com/NOAA-EMC/graphcast.git`
-   
-   `cd graphcast/NCEP`
+
+```bash   
+git clone https://github.com/NOAA-EMC/graphcast.git`
+cd graphcast/NCEP`
+```
 
 ## GDAS Utility
 
 To download and prepare GDAS data, use the following command:
 
-   `python3 gdas_utility.py yyyymmddhh yyyymmddhh --level 13 --source s3 --output /directory/to/output --download /directory/to/download --keep no`
+```bash
+python3 gdas_utility.py yyyymmddhh yyyymmddhh --level 13 --source s3 --output /directory/to/output --download /directory/to/download --keep no
+```
 
 #### Arguments (required):
 
@@ -67,7 +71,9 @@ To download and prepare GDAS data, use the following command:
 
 Example usage with options:
 
-   `python3 gdas_utility.py 2023060600 2023060606 -o /path/to/output -d /path/to/download`
+```bash
+python3 gdas_utility.py 2023060600 2023060606 -o /path/to/output -d /path/to/download
+```
 
 Note: 
 - The 37 pressure levels option is still under development.
@@ -78,7 +84,9 @@ Note:
 
 To run GraphCast, use the following command:
 
-  `python3 run_graphcast.py --input /path/to/input/file --output /path/to/output/file --weights /path/to/graphcast/weights --length forecast_length --upload yes --keep no`
+```bash
+python3 run_graphcast.py --input /path/to/input/file --output /path/to/output/file --weights /path/to/graphcast/weights --length forecast_length --upload yes --keep no`
+```
 
 #### Arguments (required):
 
@@ -92,12 +100,19 @@ To run GraphCast, use the following command:
 - `-u or --upload`: [yes, no], option for uploading the input and output files to NOAA S3 bucket [noaa-nws-graphcastgfs-pds] (default: "no")
 - `-k or --keep`: [yes, no], specifies whether to keep input and output files after uploading to NOAA S3 bucket (default: "no")
 
+Example usage with options:
+
+```bash
+python3 run_graphcast.py  -i /path/to/input -o /path/to/output -w /path/to/graphcast/weights -l 4
+```
+
 ## Run GraphCast Through Cronjob
 
 Submit the `graphcast_job_[machine_name].sh` to run GraphCast in real-time (every 6 hours) through cronjob.
 
-   `sbatch graphcast_job.sh`
-
+```bash
+sbatch graphcast_job_[machine_name].sh
+```
 
 
 3. Optional: Specify additional options (see [Options](#options)).
