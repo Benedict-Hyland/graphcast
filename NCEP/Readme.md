@@ -26,9 +26,21 @@ To install the package, run the following commands:
 
 ```bash
 conda create --name mlwp python=3.10
+```
+
+```bash
 conda activate mlwp
+```
+
+```bash
 pip install dm-tree boto3 xarray netcdf4
+```
+
+```bash
 conda install --channel conda-forge cartopy
+```
+
+```bash
 pip install --upgrade https://github.com/deepmind/graphcast/archive/master.zip
 ```
 
