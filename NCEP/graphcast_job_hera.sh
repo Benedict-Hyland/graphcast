@@ -42,7 +42,7 @@ conda activate mlwp
 start_time=$(date +%s)
 echo "start runing gdas utility to generate graphcast inputs for: $curr_datetime"
 # Run the Python script gdas.py with the calculated times
-python3 gdas_utility.py "$prev_datetime" "$curr_datetime" -k no
+python3 gdas_utility.py "$prev_datetime" "$curr_datetime" -s s3 -k no
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 
@@ -53,7 +53,7 @@ echo "Execution time for gdas_utility.py: $execution_time seconds"
 start_time=$(date +%s)
 echo "start runing graphcast to get real time 10-days forecasts for: $curr_datetime"
 # Run another Python script
-python3 run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-13_steps-2.nc -o "$curr_datetime"
+python3 run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-13_steps-2.nc -o forecast_date-"$curr_datetime"_res-0.25_levels-13_steps-"$forecast_length".nc -w /scratch1/NCEPDEV/nems/AIML/gc_weights -l "$forecast_length" -u yes -k no
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 
