@@ -150,9 +150,17 @@ class GraphCastModel:
         s3 = boto3.client('s3')
 
         # Extract date and time information from the input file name
-        date_time_info = input_file.split('_')[2]
-        date = date_time_info[:8]
-        time = date_time_info[8:10]
+        input_file_name = os.path.basename(input_file)
+        date_start = input_file_name.find("date-")
+
+        # Check if "date-" is found in the input_file_name
+        if date_start != -1:
+            date_start += len("date-")  # Move to the end of "date-"
+            date = input_file_name[date_start:date_start + 8]  # Extract 8 characters as the date
+        
+            time_start = date_start + 8  # Move to the character after the date
+            time = input_file_name[time_start:time_start + 2]  # Extract 2 characters as the time
+    
 
         # Define S3 key paths for input and output files
         input_s3_key = f'graphcastgfs.{date}/{time}/input/{input_file}'
