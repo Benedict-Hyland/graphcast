@@ -17,19 +17,16 @@ This repository provides scripts to run real-time GraphCast using GDAS products 
 
 ## Overview
 
-The National Centers for Environmental Prediction (NCEP) provides GDAS data that can be used for weather prediction and analysis. This repository simplifies the process of downloading GDAS data, extracting relevant variables, and converting it into a format compatible with the GraphCast weather prediction system. In addition, it automates running GraphCast with GDAS inputs on the AWS cloud.
+The National Centers for Environmental Prediction (NCEP) provides GDAS data that can be used for weather prediction and analysis. This repository simplifies the process of downloading GDAS data, extracting relevant variables, and converting it into a format compatible with the GraphCast weather prediction system. In addition, it automates running GraphCast with GDAS inputs on the NOAA clusters.
 
 ## Prerequisites and Installation
 
-To install the package, run:
+To install the package, run the following commands:
 
 ```bash
 conda create --name mlwp python=3.10
 conda activate mlwp
-pip install dm-tree
-pip install boto3
-pip install xarray
-pip install netcdf4
+pip install dm-tree boto3 xarray netcdf4
 conda install --channel conda-forge cartopy
 pip install --upgrade https://github.com/deepmind/graphcast/archive/master.zip
 ```
