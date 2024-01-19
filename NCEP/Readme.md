@@ -56,8 +56,11 @@ To use the utility, follow these steps:
 Clone the NOAA-EMC GraphCast repository:
 
 ```bash   
-git clone https://github.com/NOAA-EMC/graphcast.git`
-cd graphcast/NCEP`
+git clone https://github.com/NOAA-EMC/graphcast.git
+```
+
+```bash
+cd graphcast/NCEP
 ```
 
 ## GDAS Utility
