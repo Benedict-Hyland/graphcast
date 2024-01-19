@@ -38,7 +38,7 @@ class GraphCastModel:
         self.inputs = None
         self.targets = None
         self.forcings = None
-        self.s3_bucket_name = noaa-nws-graphcastgfs-pds
+        self.s3_bucket_name = "noaa-nws-graphcastgfs-pds"
 
     def load_pretrained_model(self, pretrained_model_path):
         """Load pre-trained GraphCast model."""
