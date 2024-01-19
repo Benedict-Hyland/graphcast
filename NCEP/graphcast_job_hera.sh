@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --account=nems
-#SBATCH --cpus-per-task=30 
+#SBATCH --cpus-per-task=32 
 #SBATCH --time=4:00:00 
 #SBATCH --job-name=graphcast
 #SBATCH --output=gc_output.txt
