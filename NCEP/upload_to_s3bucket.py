@@ -5,9 +5,11 @@ def upload_to_s3_wrapper(input_path, output_path, upload, keep):
     runner.upload_to_s3(input_path, output_path, keep)
 
 if __name__ == "__main__":
-    # Specify the arguments directly or use argparse if needed
-    input_path = "/path/to/input/file"
-    output_path = "/path/to/output/file"
-    upload = "yes"
-    keep = "yes"
-  
+    
+    parser = argparse.ArgumentParser(description="upload input and output to s3 bucket")
+    parser.add_argument("-i", "--input", help="input file path (including file name)", required=True)
+    parser.add_argument("-o", "--output", help="output file path (including file name)", required=True)
+    args = parser.parse_args()
+    keep = "no"
+
+    upload_to_s3_wrapper(args.input, args.output, keep)
