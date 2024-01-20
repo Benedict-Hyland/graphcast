@@ -8,6 +8,15 @@
 #SBATCH --error=gc_error.txt
 #SBATCH --partition=hera
 
+
+# load necessary modules
+module use /scratch1/NCEPDEV/nems/role.epic/spack-stack/spack-stack-1.6.0/envs/unified-env/install/modulefiles/Core
+module load stack-intel
+module load wgrib2
+module load awscli-v2
+module list
+
+
 # Get the UTC hour and calculate the time in the format yyyymmddhh
 current_hour=$(date -u +%H)
 current_hour=$((10#$current_hour))
