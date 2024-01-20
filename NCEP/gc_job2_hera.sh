@@ -11,7 +11,7 @@
 # load necessary modules
 module use /scratch1/NCEPDEV/nems/role.epic/spack-stack/spack-stack-1.5.1/envs/unified-env/install/modulefiles/Core
 module load stack-intel
-module load awscli
+module load awscli-v2
 module list
 
 
@@ -44,6 +44,7 @@ echo "forecast length: $forecast_length"
 source /scratch1/NCEPDEV/nems/AIML/miniconda3/etc/profile.d/conda.sh
 conda activate mlwp
 
+cd /scratch1/NCEPDEV/nems/AIML/graphcast/NCEP/
 
 start_time=$(date +%s)
 echo "start runing graphcast to get real time 10-days forecasts for: $curr_datetime"
