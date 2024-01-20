@@ -2,10 +2,10 @@
 
 
 # load necessary modules
-module use /scratch1/NCEPDEV/nems/role.epic/spack-stack/spack-stack-1.5.1/envs/unified-env/install/modulefiles/Core
+module use /scratch1/NCEPDEV/nems/role.epic/spack-stack/spack-stack-1.6.0/envs/unified-env/install/modulefiles/Core
 module load stack-intel
 module load wgrib2
-module load awscli
+module load awscli-v2
 module list
 
 
