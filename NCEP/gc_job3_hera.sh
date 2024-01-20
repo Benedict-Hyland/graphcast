@@ -33,6 +33,7 @@ echo "6 hours earlier state: $prev_datetime"
 source /scratch1/NCEPDEV/nems/AIML/miniconda3/etc/profile.d/conda.sh
 conda activate mlwp
 
+cd /scratch1/NCEPDEV/nems/AIML/graphcast/NCEP/
 
 start_time=$(date +%s)
 echo "start uploading graphcast forecast to s3 bucket for: $curr_datetime"
