@@ -10,7 +10,9 @@ sbatch /scratch1/NCEPDEV/nems/AIML/graphcast/NCEP/gc_job2_hera.sh
 job2_id=$(sbatch /scratch1/NCEPDEV/nems/AIML/graphcast/NCEP/gc_job2_hera.sh | awk '{print $4}')
 
 # Wait for job 2 to complete
-wait $job2_id
+while squeue -j $job2_id &>/dev/null; do
+    sleep 5  # Adjust the polling interval as needed
+done
 sleep 5  # Simulating some work
 echo "Job 2 completed"
 
