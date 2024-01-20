@@ -1,17 +1,8 @@
 #!/bin/bash
-#SBATCH --nodes=1
-#SBATCH --account=nems
-#SBATCH --cpus-per-task=32 
-#SBATCH --time=4:00:00 
-#SBATCH --job-name=graphcast
-#SBATCH --output=gc_output.txt
-#SBATCH --error=gc_error.txt
-
 
 # load necessary modules
 module use /scratch1/NCEPDEV/nems/role.epic/spack-stack/spack-stack-1.5.1/envs/unified-env/install/modulefiles/Core
 module load stack-intel
-module load wgrib2
 module load awscli
 module list
 
@@ -45,19 +36,9 @@ echo "forecast length: $forecast_length"
 source /scratch1/NCEPDEV/nems/AIML/miniconda3/etc/profile.d/conda.sh
 conda activate mlwp
 
-start_time=$(date +%s)
-echo "start runing gdas utility to generate graphcast inputs for: $curr_datetime"
-# Run the Python script gdas.py with the calculated times
-python3 gdas_utility.py "$prev_datetime" "$curr_datetime"
-
-end_time=$(date +%s)  # Record the end time in seconds since the epoch
-
-# Calculate and print the execution time
-execution_time=$((end_time - start_time))
-echo "Execution time for gdas_utility.py: $execution_time seconds"
 
 start_time=$(date +%s)
-echo "start runing graphcast to get real time 10-days forecasts for: $curr_datetime"
+echo "start uploading graphcast forecast to s3 bucket for: $curr_datetime"
 # Run another Python script
 python3 run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-13_steps-2.nc -o forecast_date-"$curr_datetime"_res-0.25_levels-13_steps-"$forecast_length".nc -w /scratch1/NCEPDEV/nems/AIML/gc_weights -l "$forecast_length" -u yes -k no
 
