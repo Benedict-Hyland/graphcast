@@ -126,7 +126,7 @@ Submit the `graphcast_job_[machine_name].sh` to run GraphCast and get real-time 
 
 ```bash
 # Example CronJob to run GraphCast every 6 hours
-0 */6 * * * /path/to/graphcast_job_[machine_name].sh
+0 */6 * * * /lustre/Sadegh.Tabas/graphcast/NCEP/cronjob_.sh >> /lustre/Sadegh.Tabas/graphcast/NCEP/logfile.log 2>&1
 ```
 
 ## Output
