@@ -1,3 +1,3 @@
 #!/bin/bash
-sh /lustre/Sadegh.Tabas/graphcast/NCEP/graphcast_job_cloud.sh
-sbatch --partition=compute /lustre/Sadegh.Tabas/graphcast/NCEP/graphcast_job_cloud.sh
+sh /scratch1/NCEPDEV/nems/AIML/graphcast/NCEP/gc_job1_hera.sh
+sbatch /scratch1/NCEPDEV/nems/AIML/graphcast/NCEP/gc_job2_hera.sh
