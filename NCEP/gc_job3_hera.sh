@@ -37,6 +37,8 @@ conda activate mlwp
 
 cd /scratch1/NCEPDEV/nems/AIML/graphcast/NCEP/
 
+forecast_length=40
+
 start_time=$(date +%s)
 echo "start uploading graphcast forecast to s3 bucket for: $curr_datetime"
 # Run another Python script
