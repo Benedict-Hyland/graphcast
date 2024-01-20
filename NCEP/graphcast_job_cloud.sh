@@ -7,6 +7,8 @@
 #SBATCH --error=gc_error.txt
 #SBATCH --partition=compute
 
+# load module lib
+source /etc/profile.d/modules.sh
 
 # load necessary modules
 module use /contrib/spack-stack/envs/ufswm/install/modulefiles/Core/
@@ -43,6 +45,9 @@ echo "forecast length: $forecast_length"
 # Activate Conda environment
 source /contrib/Sadegh.Tabas/miniconda3/etc/profile.d/conda.sh
 conda activate mlwp
+
+# going to the model directory
+cd /lustre/Sadegh.Tabas/graphcast/NCEP/
 
 start_time=$(date +%s)
 echo "start runing gdas utility to generate graphcast inputs for: $curr_datetime"
