@@ -10,6 +10,6 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--input", help="input file path (including file name)", required=True)
     parser.add_argument("-o", "--output", help="output file path (including file name)", required=True)
     args = parser.parse_args()
-    keep = "no"
+    keep = False
 
     upload_to_s3_wrapper(args.input, args.output, keep)
