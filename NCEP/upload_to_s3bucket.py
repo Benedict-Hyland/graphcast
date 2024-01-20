@@ -1,3 +1,4 @@
+import argparse
 from run_graphcast import GraphCastModel
 
 def upload_to_s3_wrapper(input_path, output_path, keep):
