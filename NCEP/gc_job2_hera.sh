@@ -6,6 +6,9 @@
 #SBATCH --job-name=graphcast
 #SBATCH --output=gc_output.txt
 #SBATCH --error=gc_error.txt
+#SBATCH --partition=hera
+#SBATCH --qos=bash
+
 
 
 # load necessary modules
@@ -49,7 +52,7 @@ cd /scratch1/NCEPDEV/nems/AIML/graphcast/NCEP/
 start_time=$(date +%s)
 echo "start runing graphcast to get real time 10-days forecasts for: $curr_datetime"
 # Run another Python script
-python3 run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-13_steps-2.nc -o forecast_date-"$curr_datetime"_res-0.25_levels-13_steps-"$forecast_length".nc -w /scratch1/NCEPDEV/nems/AIML/gc_weights -l "$forecast_length" -u yes -k no
+python3 run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-13_steps-2.nc -o forecast_date-"$curr_datetime"_res-0.25_levels-13_steps-"$forecast_length".nc -w /scratch1/NCEPDEV/nems/AIML/gc_weights -l "$forecast_length" -u no -k no
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 
