@@ -7,7 +7,6 @@
 #SBATCH --output=gc_output.txt
 #SBATCH --error=gc_error.txt
 #SBATCH --partition=hera
-#SBATCH --qos=bash
 
 # Get the UTC hour and calculate the time in the format yyyymmddhh
 current_hour=$(date -u +%H)
