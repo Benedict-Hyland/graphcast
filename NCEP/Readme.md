@@ -122,11 +122,11 @@ python3 run_graphcast.py  -i /path/to/input -o /path/to/output -w /path/to/graph
 
 ## Run GraphCast Through Cronjob
 
-Submit the `graphcast_job_[machine_name].sh` to run GraphCast and get real-time (every 6 hours) forecasts through cronjob.
+Submit the `cronjob_[machine_name].sh` to run GraphCast and get real-time (every 6 hours) forecasts through cronjob.
 
 ```bash
 # Example CronJob to run GraphCast every 6 hours
-0 */6 * * * /lustre/Sadegh.Tabas/graphcast/NCEP/cronjob_.sh >> /lustre/Sadegh.Tabas/graphcast/NCEP/logfile.log 2>&1
+0 */6 * * * /lustre/Sadegh.Tabas/graphcast/NCEP/cronjob_cloud.sh >> /lustre/Sadegh.Tabas/graphcast/NCEP/logfile.log 2>&1
 ```
 
 ## Output
