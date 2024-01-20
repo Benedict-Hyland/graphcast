@@ -29,9 +29,6 @@ prev_datetime=$( date -d "$datetime 18 hour ago" "+%Y%m%d%H" )
 echo "Current state: $curr_datetime"
 echo "6 hours earlier state: $prev_datetime"
 
-forecast_length=40
-echo "forecast length: $forecast_length"
-
 # Activate Conda environment
 source /scratch1/NCEPDEV/nems/AIML/miniconda3/etc/profile.d/conda.sh
 conda activate mlwp
@@ -40,10 +37,10 @@ conda activate mlwp
 start_time=$(date +%s)
 echo "start uploading graphcast forecast to s3 bucket for: $curr_datetime"
 # Run another Python script
-python3 run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-13_steps-2.nc -o forecast_date-"$curr_datetime"_res-0.25_levels-13_steps-"$forecast_length".nc -w /scratch1/NCEPDEV/nems/AIML/gc_weights -l "$forecast_length" -u yes -k no
+python3 upload_to_s3bucket.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-13_steps-2.nc -o forecast_date-"$curr_datetime"_res-0.25_levels-13_steps-"$forecast_length".nc
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 
 # Calculate and print the execution time
 execution_time=$((end_time - start_time))
-echo "Execution time for graphcast: $execution_time seconds"
+echo "Execution time for uploading to s3 bucket: $execution_time seconds"
