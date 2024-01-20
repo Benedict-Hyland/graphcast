@@ -1,6 +1,6 @@
 from run_graphcast import GraphCastModel
 
-def upload_to_s3_wrapper(input_path, output_path, upload, keep):
+def upload_to_s3_wrapper(input_path, output_path, keep):
     runner = GraphCastModel()
     runner.upload_to_s3(input_path, output_path, keep)
 
