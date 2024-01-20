@@ -9,7 +9,8 @@
 #SBATCH --partition=hera
 #SBATCH --qos=bash
 
-
+# load module lib
+source /etc/profile.d/modules.sh
 
 # load necessary modules
 module use /scratch1/NCEPDEV/nems/role.epic/spack-stack/spack-stack-1.5.1/envs/unified-env/install/modulefiles/Core
