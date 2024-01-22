@@ -303,15 +303,27 @@ class GFSDataProcessor:
         # Define the directory where your GRIB2 files are located
         data_directory = self.local_base_directory
 
-        # Create a dictionary to specify the variables, levels, and whether to extract only the first time step (if needed)
-        #gfs_vars = {
-        #    'U component of wind, V component of wind, Vertical velocity, Specific humidity, Temperature, Geopotential height': 
-        #        {'typeOfLevel': 'isobaricInhPa', 'level': [50,100,150,200,250,300,400,500,600,700,850,925,1000]},
-        #    '2 metre temperature': {'typeOfLevel': 'heightAboveGround', 'level': 2},
-        #    'Pressure reduced to MSL': {'typeOfLevel': 'meanSea', 'level': 0},
-        #    '10 metre U wind component, 10 metre V wind component': {'typeOfLevel': 'heightAboveGround', 'level': 10},
-        #    'Land-sea mask, Precipitation rate': {'typeOfLevel': 'surface', 'level': 0},
-        #}
+        # create instance
+        self.plevels = [50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 850, 925, 1000]
+
+        #update the number of pressure levels
+        if self.num_levels == 37:
+            self.plevels = [
+                1, 2, 3, 5, 7, 10, 20, 30, 50, 70, 100, 
+                125, 150, 175, 200, 225, 250, 300, 350, 400,
+                450, 500, 550, 600, 650, 700, 750, 775, 800,
+                825, 850, 875, 900, 925, 950, 975, 1000,
+            ]
+        elif self.num_levels == 31:
+            self.plevels = [
+                1, 2, 3, 5, 7, 10, 20, 30, 50, 70, 100, 
+                150, 200, 250, 300, 350, 400,
+                450, 500, 550, 600, 650, 700, 750, 800,
+                850, 900, 925, 950, 975, 1000,
+            ]
+
+        print(f'Total number of pressure levels is {len(self.plevels)}')
+
         variables_to_extract = {
             '.f000': {
                 '2t': {
@@ -328,12 +340,11 @@ class GFSDataProcessor:
                 },
                 'w, u, v, q, t, gh': {
                     'typeOfLevel': 'isobaricInhPa',
-                    'level': [50,100,150,200,250,300,400,500,600,700,850,925,1000],
+                    'level': self.plevels,
                 },
                 'lsm, orog': {
                     'typeOfLevel': 'surface',
                     'level': 0,
-                    'first_time_step_only': True,  # Extract only the first time step
                 },
             },
             '.f006': {
@@ -385,8 +396,6 @@ class GFSDataProcessor:
                                 print(f'Get variable {var_name} from file {total_files} {fname}:')
                                 # Find the matching grib message
                                 variable_message = grbs.select(shortName=var_name, typeOfLevel=levelType, level=desired_level)
-                                #print(f'length is {len(variable_message)}!')
-
                                 # create a netcdf dataset using the matching grib message
                                 lats, lons = variable_message[0].latlons()
                                 lats = lats[:,0]
@@ -399,10 +408,7 @@ class GFSDataProcessor:
                                     lats = lats[::-1]
     
                                 steps = variable_message[0].validDate
-                                print(f'Date is {steps}')
                                 shortName = variable_message[0].shortName
-                                #units = variable_message[0].units
-                                #print(f'units is {units}')
     
                                 #precipitation rate has two stepType ('instant', 'avg'), use 'instant')
                                 if len(variable_message) > 2:
@@ -418,7 +424,6 @@ class GFSDataProcessor:
                                         data = data[::-1, :]
     
     
-                                #varName = f"{var_name.lower().replace(' ', '_')}"
                                 if len(data.shape) == 2:
                                     da = xr.Dataset(
                                         data_vars={
@@ -444,12 +449,6 @@ class GFSDataProcessor:
                                     )
      
                                 da[var_name] = da[var_name].astype('float32')
-
-                                #assign attributes
-                                #da.assign_attrs(
-                                #    long_name = variable_message[0].name,
-                                #    units = variable_message[0].units,
-                                #)
 
                                 mergeDAs.append(da)
                                 da.close()
@@ -478,7 +477,6 @@ class GFSDataProcessor:
             '10u': '10m_u_component_of_wind',
             '10v': '10m_v_component_of_wind',
             'tp': 'total_precipitation_6hr',
-            #'USWRF_topofatmosphere': 'toa_incident_solar_radiation',
             'gh': 'geopotential',
             't': 'temperature',
             'q': 'specific_humidity',
@@ -506,7 +504,7 @@ class GFSDataProcessor:
 
         if self.output_directory is None:
             self.output_directory = os.getcwd()  # Use current directory if not specified
-        output_netcdf = os.path.join(self.output_directory, f"source-gdas_date-{date}_res-0.25_levels-13_steps-{steps}.nc")
+        output_netcdf = os.path.join(self.output_directory, f"source-gdas_date-{date}_res-0.25_levels-{len(self.plevels)}_steps-{steps}.nc")
 
         #final_dataset = ds.assign_coords(datetime=ds.time)
         ds.to_netcdf(output_netcdf)
@@ -522,6 +520,16 @@ class GFSDataProcessor:
             print("Downloaded data removed.")
         except Exception as e:
             print(f"Error removing downloaded data: {str(e)}")
+
+    @property
+    def plevels(self):
+        return self._plevels
+
+    @plevels.setter
+    def plevels(self, new_plevels):
+        if isinstance(new_plevels, list):
+            self._plevels = new_plevels
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download and process GDAS data")
