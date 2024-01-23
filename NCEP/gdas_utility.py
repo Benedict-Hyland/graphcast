@@ -10,18 +10,80 @@ Revision history:
 import os
 import sys
 from time import time
+import glob
+import argparse
+import subprocess
+from datetime import datetime, timedelta
 
 import boto3
 import xarray as xr
-import subprocess
 import numpy as np
-from datetime import datetime, timedelta
 from botocore.config import Config
 from botocore import UNSIGNED
-import argparse
 import pygrib
 import requests
 from bs4 import BeautifulSoup
+
+def get_dataarray(grbfile, var_name, level_type, desired_level):
+
+    # Find the matching grib message
+    variable_message = grbfile.select(shortName=var_name, typeOfLevel=level_type, level=desired_level)
+
+    # create a netcdf dataset using the matching grib message
+    lats, lons = variable_message[0].latlons()
+    lats = lats[:,0]
+    lons = lons[0,:]
+
+    #check latitude range
+    reverse_lat = False
+    if lats[0] > 0:
+        reverse_lat = True
+        lats = lats[::-1]
+
+    steps = variable_message[0].validDate
+    shortName = variable_message[0].shortName
+
+    #precipitation rate has two stepType ('instant', 'avg'), use 'instant')
+    if len(variable_message) > 2:
+        data = []
+        for message in variable_message:
+            data.append(message.values)
+        data = np.array(data)
+        if reverse_lat:
+            data = data[:, ::-1, :]
+    else:
+        data = variable_message[0].values
+        if reverse_lat:
+            data = data[::-1, :]
+
+    if len(data.shape) == 2:
+        da = xr.Dataset(
+            data_vars={
+                var_name: (['latitude', 'longitude'], data)
+            },
+            coords={
+                'longitude': lons,
+                'latitude': lats,
+                'time': steps,  
+            }
+        )
+    elif len(data.shape) == 3:
+        da = xr.Dataset(
+            data_vars={
+                var_name: (['level', 'latitude', 'longitude'], data)
+            },
+            coords={
+                'longitude': lons,
+                'latitude': lats,
+                'level': np.array(desired_level),
+                'time': steps,  
+            }
+        )
+
+    da[var_name] = da[var_name].astype('float32')
+
+    return da
+
 
 class GFSDataProcessor:
     def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, download_source='nomads', output_directory=None, download_directory=None, keep_downloaded_data=True):
@@ -324,6 +386,7 @@ class GFSDataProcessor:
 
         print(f'Total number of pressure levels is {len(self.plevels)}')
 
+        #Get time-varying variables
         variables_to_extract = {
             '.f000': {
                 '2t': {
@@ -342,10 +405,6 @@ class GFSDataProcessor:
                     'typeOfLevel': 'isobaricInhPa',
                     'level': self.plevels,
                 },
-                'lsm, orog': {
-                    'typeOfLevel': 'surface',
-                    'level': 0,
-                },
             },
             '.f006': {
                 'tp': {  # total precipitation 
@@ -360,7 +419,6 @@ class GFSDataProcessor:
         print("Start extracting variables and associated levels from grib2 files:")
         # Loop through each folder (e.g., gdas.yyyymmdd)
         date_folders = sorted(next(os.walk(data_directory))[1])
-        total_files = 0 # to track files
         for date_folder in date_folders:
             date_folder_path = os.path.join(data_directory, date_folder)
 
@@ -374,7 +432,6 @@ class GFSDataProcessor:
                     mergeDAs = []
 
                     for file_extension, variables in variables_to_extract.items():
-                        total_files = total_files + 1
                         fname = os.path.join(subfolder_path, f'gdas.t{hour}z.pgrb2.0p25{file_extension}')
 
                         #open grib file
@@ -388,70 +445,8 @@ class GFSDataProcessor:
                     
                             for var_name in variable_names:
 
-                                # if var_name in ['orog', 'lsm'= and total_files > 1, then skip
-                                if total_files > 1 and var_name in ['lsm', 'orog']: 
-                                    print(f'Skip variable {var_name}!')
-                                    continue
-                                
-                                print(f'Get variable {var_name} from file {total_files} {fname}:')
-                                # Find the matching grib message
-                                variable_message = grbs.select(shortName=var_name, typeOfLevel=levelType, level=desired_level)
-                                # create a netcdf dataset using the matching grib message
-                                lats, lons = variable_message[0].latlons()
-                                lats = lats[:,0]
-                                lons = lons[0,:]
-    
-                                reverse_lat = False
-                                #check latitude range
-                                if lats[0] > 0:
-                                    reverse_lat = True
-                                    lats = lats[::-1]
-    
-                                steps = variable_message[0].validDate
-                                shortName = variable_message[0].shortName
-    
-                                #precipitation rate has two stepType ('instant', 'avg'), use 'instant')
-                                if len(variable_message) > 2:
-                                    data = []
-                                    for message in variable_message:
-                                        data.append(message.values)
-                                    data = np.array(data)
-                                    if reverse_lat:
-                                        data = data[:, ::-1, :]
-                                else:
-                                    data = variable_message[0].values
-                                    if reverse_lat:
-                                        data = data[::-1, :]
-    
-    
-                                if len(data.shape) == 2:
-                                    da = xr.Dataset(
-                                        data_vars={
-                                            var_name: (['latitude', 'longitude'], data)
-                                        },
-                                        coords={
-                                            'longitude': lons,
-                                            'latitude': lats,
-                                            'time': steps,  
-                                        }
-                                    )
-                                elif len(data.shape) == 3:
-                                    da = xr.Dataset(
-                                        data_vars={
-                                            var_name: (['level', 'latitude', 'longitude'], data)
-                                        },
-                                        coords={
-                                            'longitude': lons,
-                                            'latitude': lats,
-                                            'level': np.array(desired_level),
-                                            'time': steps,  
-                                        }
-                                    )
-     
-                                da[var_name] = da[var_name].astype('float32')
-
-                                mergeDAs.append(da)
-                                da.close()
+                                print(f'Get variable {var_name} from file {fname}:')
+                                mergeDAs.append(get_dataarray(grbs, var_name, levelType, desired_level))
         
                     ds = xr.merge(mergeDAs)
                     ds['latitude'] = ds['latitude'].astype('float32')
@@ -460,18 +455,27 @@ class GFSDataProcessor:
                     mergeDSs.append(ds)
                     ds.close()
 
+        #Concatenate ds
         ds = xr.concat(mergeDSs, dim='time')
 
-        #reduce orog/lsm from 3D to 2D
-        ds['lsm0'] = ds.lsm.mean('time')
-        ds['orog0'] = ds.orog.mean('time')
-        ds = ds.drop_vars(['lsm', 'orog'])
- 
+        #Get 2D static variables
+        grbfiles = glob.glob(f'{data_directory}/*/*/*.f000')
+        grbfiles.sort()
+        #Get lsm/orog from the first file
+        grbs = pygrib.open(grbfiles[0])
+        levelType = 'surface'
+        desired_level = 0
+        for var_name in ['lsm', 'orog']:
+            da = get_dataarray(grbs, var_name, levelType, desired_level)
+            da['latitude'] = da['latitude'].astype('float32')
+            da['longitude'] = da['longitude'].astype('float32')
+            ds = xr.merge([ds, da])
+
         ds = ds.rename({
             'latitude': 'lat',
             'longitude': 'lon',
-            'lsm0': 'land_sea_mask',
-            'orog0': 'geopotential_at_surface',
+            'lsm': 'land_sea_mask',
+            'orog': 'geopotential_at_surface',
             'prmsl': 'mean_sea_level_pressure',
             '2t': '2m_temperature',
             '10u': '10m_u_component_of_wind',
