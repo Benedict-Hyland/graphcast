@@ -5,6 +5,7 @@ Revision history:
     -20231010: Sadegh Tabas, initial code
     -20231204: Sadegh Tabas, calculating toa incident solar radiation, parallelizing, updating units, and resolving memory issues
     -20240112: Sadegh Tabas, (i)removing Pysolar as tisr would be calc through GC, (ii) add NOMADS option for downloading data, (iii) add 37 pressure levels, (iv) configurations for hera
+    -20240123: Sadegh Tabas, fixed bugs
 '''
 import os
 import sys
@@ -203,28 +204,18 @@ class GFSDataProcessor:
 
                                 # If specified, extract only the first time step
                                 if variable not in [':LAND:', ':HGT:']:
-                                    # Append the dataset to the list
-                                    extracted_datasets.append(output_file)
-                                    ds.to_netcdf(output_file)
+                                    extracted_datasets.append(ds)
                                 else:
                                     if first_time_step_only:
                                         # Append the dataset to the list
                                         ds = ds.isel(time=0)
-                                        extracted_datasets.append(output_file)
+                                        extracted_datasets.append(ds)
                                         variables_to_extract[file_extension][variable]['first_time_step_only'] = False
-                                        ds.to_netcdf(output_file)
-                                    else:
-                                        os.remove(output_file)
                                 
                                 # Optionally, remove the intermediate GRIB2 file
                                 # os.remove(output_file)
         print("Merging grib2 files:")
-        ds = xr.open_dataset(extracted_datasets[0])
-        for file in extracted_datasets[1:]:
-            currDS = xr.open_dataset(file)
-            ds = xr.merge([ds, currDS])
-            
-            os.remove(file)
+        ds = xr.merge(extracted_datasets)
         
         print("Merging process completed.")
         
@@ -288,7 +279,6 @@ class GFSDataProcessor:
 
         # Save the merged dataset as a NetCDF file
         ds.to_netcdf(output_netcdf)
-        os.remove(extracted_datasets[0])
         print(f"Saved output to {output_netcdf}")
 
         # Optionally, remove downloaded data
