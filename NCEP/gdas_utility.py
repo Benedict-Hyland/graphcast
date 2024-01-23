@@ -5,7 +5,6 @@ Revision history:
     -20231010: Sadegh Tabas, initial code
     -20231204: Sadegh Tabas, calculating toa incident solar radiation, parallelizing, updating units, and resolving memory issues
     -20240112: Sadegh Tabas, (i)removing Pysolar as tisr would be calc through GC, (ii) add NOMADS option for downloading data, (iii) add 37 pressure levels, (iv) configurations for hera
-    -20240123: Sadegh Tabas, fixed bugs
 '''
 import os
 import sys
@@ -168,6 +167,7 @@ class GFSDataProcessor:
 
         # Create an empty list to store the extracted datasets
         extracted_datasets = []
+        files = []
         print("Start extracting variables and associated levels from grib2 files:")
         # Loop through each folder (e.g., gdas.yyyymmdd)
         date_folders = sorted(next(os.walk(data_directory))[1])
@@ -187,11 +187,11 @@ class GFSDataProcessor:
                             first_time_step_only = data.get('first_time_step_only', False)  # Default to False if not specified
 
                             grib2_file = os.path.join(subfolder_path, f'gdas.t{hour}z.pgrb2.0p25{file_extension}')
-
+                    
                             # Extract the specified variables with levels from the GRIB2 file
                             for level in levels:
                                 output_file = f'{variable}_{level}_{date_folder}_{hour}{file_extension}.nc'
-
+                                files.append(output_file)
                                 # Use wgrib2 to extract the variable with level
                                 wgrib2_command = ['wgrib2', '-nc_nlev', f'{self.num_levels}', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
                                 subprocess.run(wgrib2_command, check=True)
@@ -280,7 +280,9 @@ class GFSDataProcessor:
         # Save the merged dataset as a NetCDF file
         ds.to_netcdf(output_netcdf)
         print(f"Saved output to {output_netcdf}")
-
+        for file in files:
+            os.remove(file)
+            
         # Optionally, remove downloaded data
         if not self.keep_downloaded_data:
             self.remove_downloaded_data()
