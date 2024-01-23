@@ -365,27 +365,6 @@ class GFSDataProcessor:
         # Define the directory where your GRIB2 files are located
         data_directory = self.local_base_directory
 
-        # create instance
-        self.plevels = [50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 850, 925, 1000]
-
-        #update the number of pressure levels
-        if self.num_levels == 37:
-            self.plevels = [
-                1, 2, 3, 5, 7, 10, 20, 30, 50, 70, 100, 
-                125, 150, 175, 200, 225, 250, 300, 350, 400,
-                450, 500, 550, 600, 650, 700, 750, 775, 800,
-                825, 850, 875, 900, 925, 950, 975, 1000,
-            ]
-        elif self.num_levels == 31:
-            self.plevels = [
-                1, 2, 3, 5, 7, 10, 20, 30, 50, 70, 100, 
-                150, 200, 250, 300, 350, 400,
-                450, 500, 550, 600, 650, 700, 750, 800,
-                850, 900, 925, 950, 975, 1000,
-            ]
-
-        print(f'Total number of pressure levels is {len(self.plevels)}')
-
         #Get time-varying variables
         variables_to_extract = {
             '.f000': {
@@ -403,7 +382,7 @@ class GFSDataProcessor:
                 },
                 'w, u, v, q, t, gh': {
                     'typeOfLevel': 'isobaricInhPa',
-                    'level': self.plevels,
+                    'level': [50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 850, 925, 1000],
                 },
             },
             '.f006': {
@@ -413,6 +392,14 @@ class GFSDataProcessor:
                 },
             }
         }
+
+        if self.num_levels == 37:
+            variables_to_extract['.f000']['w, u, v, q, t, gh']['level'] = [
+                1, 2, 3, 5, 7, 10, 20, 30, 50, 70, 100, 
+                125, 150, 175, 200, 225, 250, 300, 350, 400,
+                450, 500, 550, 600, 650, 700, 750, 775, 800,
+                825, 850, 875, 900, 925, 950, 975, 1000,
+            ]
 
         # Create an empty list to store the extracted datasets
         mergeDSs = []
@@ -504,11 +491,11 @@ class GFSDataProcessor:
 
         # Define the output NetCDF file
         date = (self.start_datetime + timedelta(hours=6)).strftime('%Y%m%d%H')
-        steps = str(len(ds['time'])-2)
+        steps = str(len(ds['time']))
 
         if self.output_directory is None:
             self.output_directory = os.getcwd()  # Use current directory if not specified
-        output_netcdf = os.path.join(self.output_directory, f"source-gdas_date-{date}_res-0.25_levels-{len(self.plevels)}_steps-{steps}.nc")
+        output_netcdf = os.path.join(self.output_directory, f"source-gdas_date-{date}_res-0.25_levels-{self.num_levels}_steps-{steps}.nc")
 
         #final_dataset = ds.assign_coords(datetime=ds.time)
         ds.to_netcdf(output_netcdf)
@@ -524,15 +511,6 @@ class GFSDataProcessor:
             print("Downloaded data removed.")
         except Exception as e:
             print(f"Error removing downloaded data: {str(e)}")
-
-    @property
-    def plevels(self):
-        return self._plevels
-
-    @plevels.setter
-    def plevels(self, new_plevels):
-        if isinstance(new_plevels, list):
-            self._plevels = new_plevels
 
 
 if __name__ == "__main__":
