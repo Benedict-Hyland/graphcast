@@ -167,6 +167,7 @@ class GFSDataProcessor:
 
         # Create an empty list to store the extracted datasets
         extracted_datasets = []
+        files = []
         print("Start extracting variables and associated levels from grib2 files:")
         # Loop through each folder (e.g., gdas.yyyymmdd)
         date_folders = sorted(next(os.walk(data_directory))[1])
@@ -186,11 +187,11 @@ class GFSDataProcessor:
                             first_time_step_only = data.get('first_time_step_only', False)  # Default to False if not specified
 
                             grib2_file = os.path.join(subfolder_path, f'gdas.t{hour}z.pgrb2.0p25{file_extension}')
-
+                    
                             # Extract the specified variables with levels from the GRIB2 file
                             for level in levels:
                                 output_file = f'{variable}_{level}_{date_folder}_{hour}{file_extension}.nc'
-
+                                files.append(output_file)
                                 # Use wgrib2 to extract the variable with level
                                 wgrib2_command = ['wgrib2', '-nc_nlev', f'{self.num_levels}', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
                                 subprocess.run(wgrib2_command, check=True)
@@ -203,28 +204,18 @@ class GFSDataProcessor:
 
                                 # If specified, extract only the first time step
                                 if variable not in [':LAND:', ':HGT:']:
-                                    # Append the dataset to the list
-                                    extracted_datasets.append(output_file)
-                                    ds.to_netcdf(output_file)
+                                    extracted_datasets.append(ds)
                                 else:
                                     if first_time_step_only:
                                         # Append the dataset to the list
                                         ds = ds.isel(time=0)
-                                        extracted_datasets.append(output_file)
+                                        extracted_datasets.append(ds)
                                         variables_to_extract[file_extension][variable]['first_time_step_only'] = False
-                                        ds.to_netcdf(output_file)
-                                    else:
-                                        os.remove(output_file)
                                 
                                 # Optionally, remove the intermediate GRIB2 file
                                 # os.remove(output_file)
         print("Merging grib2 files:")
-        ds = xr.open_dataset(extracted_datasets[0])
-        for file in extracted_datasets[1:]:
-            currDS = xr.open_dataset(file)
-            ds = xr.merge([ds, currDS])
-            
-            os.remove(file)
+        ds = xr.merge(extracted_datasets)
         
         print("Merging process completed.")
         
@@ -288,9 +279,10 @@ class GFSDataProcessor:
 
         # Save the merged dataset as a NetCDF file
         ds.to_netcdf(output_netcdf)
-        os.remove(extracted_datasets[0])
         print(f"Saved output to {output_netcdf}")
-
+        for file in files:
+            os.remove(file)
+            
         # Optionally, remove downloaded data
         if not self.keep_downloaded_data:
             self.remove_downloaded_data()
@@ -311,10 +303,10 @@ if __name__ == "__main__":
     parser.add_argument("start_datetime", help="Start datetime in the format 'YYYYMMDDHH'")
     parser.add_argument("end_datetime", help="End datetime in the format 'YYYYMMDDHH'")
     parser.add_argument("-l", "--levels", help="number of pressure levels, options: 13, 37", default="13")
-    parser.add_argument("-s", "--source", help="the source repository to download gdas grib2 data, options: nomads (up-to-date), s3", default="nomads")
+    parser.add_argument("-s", "--source", help="the source repository to download gdas grib2 data, options: nomads (up-to-date), s3", default="s3")
     parser.add_argument("-o", "--output", help="Output directory for processed data")
     parser.add_argument("-d", "--download", help="Download directory for raw data")
-    parser.add_argument("-k", "--keep", help="Keep downloaded data (yes or no)", default="yes")
+    parser.add_argument("-k", "--keep", help="Keep downloaded data (yes or no)", default="no")
 
     args = parser.parse_args()
 
