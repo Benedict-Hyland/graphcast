@@ -491,7 +491,8 @@ class GFSDataProcessor:
         ds.to_netcdf(output_netcdf)
         ds.close()
 
-        print("Processing completed.")
+        print("Processing completed.\n")
+        print(f"Saved output to {output_netcdf}")
 
     def remove_downloaded_data(self):
         # Remove downloaded data from the specified directory
