@@ -5,19 +5,81 @@ Revision history:
     -20231010: Sadegh Tabas, initial code
     -20231204: Sadegh Tabas, calculating toa incident solar radiation, parallelizing, updating units, and resolving memory issues
     -20240112: Sadegh Tabas, (i)removing Pysolar as tisr would be calc through GC, (ii) add NOMADS option for downloading data, (iii) add 37 pressure levels, (iv) configurations for hera
+    -20240124: Linlin Cui, added pygrib method to extract variables from grib2 files
 '''
 import os
 import sys
+from time import time
+import glob
+import argparse
+import subprocess
+from datetime import datetime, timedelta
+
 import boto3
 import xarray as xr
-import subprocess
 import numpy as np
-from datetime import datetime, timedelta
 from botocore.config import Config
 from botocore import UNSIGNED
-import argparse
+import pygrib
 import requests
 from bs4 import BeautifulSoup
+
+def get_dataarray(grbfile, var_name, level_type, desired_level):
+
+    # Find the matching grib message
+    variable_message = grbfile.select(shortName=var_name, typeOfLevel=level_type, level=desired_level)
+
+    # create a netcdf dataset using the matching grib message
+    lats, lons = variable_message[0].latlons()
+    lats = lats[:,0]
+    lons = lons[0,:]
+
+    #check latitude range
+    reverse_lat = False
+    if lats[0] > 0:
+        reverse_lat = True
+        lats = lats[::-1]
+
+    steps = variable_message[0].validDate
+
+    #precipitation rate has two stepType ('instant', 'avg'), use 'instant')
+    if len(variable_message) > 2:
+        data = []
+        for message in variable_message:
+            data.append(message.values)
+        data = np.array(data)
+        if reverse_lat:
+            data = data[:, ::-1, :]
+    else:
+        data = variable_message[0].values
+        if reverse_lat:
+            data = data[::-1, :]
+
+    if len(data.shape) == 2:
+        da = xr.Dataset(
+            data_vars={
+                var_name: (['lat', 'lon'], data.astype('float32'))
+            },
+            coords={
+                'lon': lons.astype('float32'),
+                'lat': lats.astype('float32'),
+                'time': steps,  
+            }
+        )
+    elif len(data.shape) == 3:
+        da = xr.Dataset(
+            data_vars={
+                var_name: (['level', 'lat', 'lon'], data.astype('float32'))
+            },
+            coords={
+                'lon': lons.astype('float32'),
+                'lat': lats.astype('float32'),
+                'level': np.array(desired_level).astype('int32'),
+                'time': steps,  
+            }
+        )
+
+    return da
 
 
 class GFSDataProcessor:
@@ -127,8 +189,7 @@ class GFSDataProcessor:
 
         print("Download completed.")
 
-    
-    def process_data(self):
+    def process_data_with_wgrib2(self):
         # Define the directory where your GRIB2 files are located
         data_directory = self.local_base_directory
 
@@ -250,7 +311,7 @@ class GFSDataProcessor:
         ds['lat'] = ds['lat'].astype('float32')
         ds['lon'] = ds['lon'].astype('float32')
         ds['level'] = ds['level'].astype('int32')
-        
+
         # Adjust time values relative to the first time step
         ds['time'] = ds['time'] - ds.time[0]
 
@@ -289,6 +350,150 @@ class GFSDataProcessor:
 
         print(f"Process completed successfully, your inputs for GraphCast model generated at:\n {output_netcdf}")
 
+    def process_data_with_pygrib(self):
+        # Define the directory where your GRIB2 files are located
+        data_directory = self.local_base_directory
+
+        #Get time-varying variables
+        variables_to_extract = {
+            '.f000': {
+                '2t': {
+                    'typeOfLevel': 'heightAboveGround',
+                    'level': 2,
+                },
+                'prmsl': {
+                    'typeOfLevel': 'meanSea',
+                    'level': 0,
+                },
+                '10u, 10v': {
+                    'typeOfLevel': 'heightAboveGround',
+                    'level': 10,
+                },
+                'w, u, v, q, t, gh': {
+                    'typeOfLevel': 'isobaricInhPa',
+                    'level': [50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 850, 925, 1000],
+                },
+            },
+            '.f006': {
+                'tp': {  # total precipitation 
+                    'typeOfLevel': 'surface',
+                    'level': 0,
+                },
+            }
+        }
+
+        if self.num_levels == 37:
+            variables_to_extract['.f000']['w, u, v, q, t, gh']['level'] = [
+                1, 2, 3, 5, 7, 10, 20, 30, 50, 70, 100, 
+                125, 150, 175, 200, 225, 250, 300, 350, 400,
+                450, 500, 550, 600, 650, 700, 750, 775, 800,
+                825, 850, 875, 900, 925, 950, 975, 1000,
+            ]
+
+        # Create an empty list to store the extracted datasets
+        mergeDSs = []
+        print("Start extracting variables and associated levels from grib2 files:")
+        # Loop through each folder (e.g., gdas.yyyymmdd)
+        date_folders = sorted(next(os.walk(data_directory))[1])
+        for date_folder in date_folders:
+            date_folder_path = os.path.join(data_directory, date_folder)
+
+            # Loop through each hour (e.g., '00', '06', '12', '18')
+            for hour in ['00', '06', '12', '18']:
+                subfolder_path = os.path.join(date_folder_path, hour)
+
+                # Check if the subfolder exists before processing
+                if os.path.exists(subfolder_path):
+
+                    mergeDAs = []
+
+                    for file_extension, variables in variables_to_extract.items():
+                        fname = os.path.join(subfolder_path, f'gdas.t{hour}z.pgrb2.0p25{file_extension}')
+
+                        #open grib file
+                        grbs = pygrib.open(fname)
+
+                        for key, value in variables.items():
+
+                            variable_names = key.split(', ')
+                            levelType = value['typeOfLevel']
+                            desired_level = value['level']
+                    
+                            for var_name in variable_names:
+
+                                print(f'Get variable {var_name} from file {fname}:')
+                                mergeDAs.append(get_dataarray(grbs, var_name, levelType, desired_level))
+        
+                    ds = xr.merge(mergeDAs)
+
+                    mergeDSs.append(ds)
+                    ds.close()
+
+        #Concatenate ds
+        ds = xr.concat(mergeDSs, dim='time')
+
+        #Get 2D static variables
+        grbfiles = glob.glob(f'{data_directory}/*/*/*.f000')
+        grbfiles.sort()
+        #Get lsm/orog from the first file
+        grbs = pygrib.open(grbfiles[0])
+        levelType = 'surface'
+        desired_level = 0
+        for var_name in ['lsm', 'orog']:
+            da = get_dataarray(grbs, var_name, levelType, desired_level)
+            ds = xr.merge([ds, da])
+
+        ds = ds.rename({
+            'lsm': 'land_sea_mask',
+            'orog': 'geopotential_at_surface',
+            'prmsl': 'mean_sea_level_pressure',
+            '2t': '2m_temperature',
+            '10u': '10m_u_component_of_wind',
+            '10v': '10m_v_component_of_wind',
+            'tp': 'total_precipitation_6hr',
+            'gh': 'geopotential',
+            't': 'temperature',
+            'q': 'specific_humidity',
+            'w': 'vertical_velocity',
+            'u': 'u_component_of_wind',
+            'v': 'v_component_of_wind'
+        })
+
+        ds = ds.assign_coords(datetime=ds.time)
+
+        # Adjust time values relative to the first time step
+        ds['time'] = ds['time'] - ds.time[0]
+
+        # Expand dimensions
+        ds = ds.expand_dims(dim='batch')
+        ds['datetime'] = ds['datetime'].expand_dims(dim='batch')
+
+        # Squeeze dimensions
+        ds['geopotential_at_surface'] = ds['geopotential_at_surface'].squeeze('batch')
+        ds['land_sea_mask'] = ds['land_sea_mask'].squeeze('batch')
+
+        # Update geopotential unit to m2/s2 by multiplying 9.80665
+        ds['geopotential_at_surface'] = ds['geopotential_at_surface'] * 9.80665
+        ds['geopotential'] = ds['geopotential'] * 9.80665
+
+        # Update total_precipitation_6hr unit to (m) from (kg/m^2) by dividing it by 1000kg/m³
+        ds['total_precipitation_6hr'] = ds['total_precipitation_6hr'] / 1000
+
+        # Define the output NetCDF file
+        date = (self.start_datetime + timedelta(hours=6)).strftime('%Y%m%d%H')
+        steps = str(len(ds['time']))
+
+        if self.output_directory is None:
+            self.output_directory = os.getcwd()  # Use current directory if not specified
+        output_netcdf = os.path.join(self.output_directory, f"source-gdas_date-{date}_res-0.25_levels-{self.num_levels}_steps-{steps}.nc")
+
+        #final_dataset = ds.assign_coords(datetime=ds.time)
+        ds.to_netcdf(output_netcdf)
+        ds.close()
+
+        print("Processing completed.\n")
+        print(f"Saved output to {output_netcdf}")
+
     def remove_downloaded_data(self):
         # Remove downloaded data from the specified directory
         print("Removing downloaded grib2 data...")
@@ -298,11 +503,13 @@ class GFSDataProcessor:
         except Exception as e:
             print(f"Error removing downloaded data: {str(e)}")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download and process GDAS data")
     parser.add_argument("start_datetime", help="Start datetime in the format 'YYYYMMDDHH'")
     parser.add_argument("end_datetime", help="End datetime in the format 'YYYYMMDDHH'")
     parser.add_argument("-l", "--levels", help="number of pressure levels, options: 13, 37", default="13")
+    parser.add_argument("-m", "--method", help="method to extact variables from grib2, options: wgrib2, pygrib", default="wgrib2")
     parser.add_argument("-s", "--source", help="the source repository to download gdas grib2 data, options: nomads (up-to-date), s3", default="s3")
     parser.add_argument("-o", "--output", help="Output directory for processed data")
     parser.add_argument("-d", "--download", help="Download directory for raw data")
@@ -314,10 +521,18 @@ if __name__ == "__main__":
     end_datetime = datetime.strptime(args.end_datetime, "%Y%m%d%H")
     num_pressure_levels = int(args.levels)
     download_source = args.source
+    method = args.method
     output_directory = args.output
     download_directory = args.download
     keep_downloaded_data = args.keep.lower() == "yes"
 
     data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, download_source, output_directory, download_directory, keep_downloaded_data)
     data_processor.download_data()
-    data_processor.process_data()
+    
+    if method == "wgrib2":
+      data_processor.process_data_with_wgrib2()
+    elif method == "pygrib":
+      data_processor.process_data_with_pygrib()
+    else:
+      raise NotImplementedError(f"Method {method} is not supported!")
+
