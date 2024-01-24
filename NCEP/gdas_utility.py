@@ -41,7 +41,6 @@ def get_dataarray(grbfile, var_name, level_type, desired_level):
         lats = lats[::-1]
 
     steps = variable_message[0].validDate
-    shortName = variable_message[0].shortName
 
     #precipitation rate has two stepType ('instant', 'avg'), use 'instant')
     if len(variable_message) > 2:
@@ -59,28 +58,26 @@ def get_dataarray(grbfile, var_name, level_type, desired_level):
     if len(data.shape) == 2:
         da = xr.Dataset(
             data_vars={
-                var_name: (['latitude', 'longitude'], data)
+                var_name: (['lat', 'lon'], data.astype('float32'))
             },
             coords={
-                'longitude': lons,
-                'latitude': lats,
+                'lon': lons.astype('float32'),
+                'lat': lats.astype('float32'),
                 'time': steps,  
             }
         )
     elif len(data.shape) == 3:
         da = xr.Dataset(
             data_vars={
-                var_name: (['level', 'latitude', 'longitude'], data)
+                var_name: (['level', 'lat', 'lon'], data.astype('float32'))
             },
             coords={
-                'longitude': lons,
-                'latitude': lats,
-                'level': np.array(desired_level),
+                'lon': lons.astype('float32'),
+                'lat': lats.astype('float32'),
+                'level': np.array(desired_level).astype('int32'),
                 'time': steps,  
             }
         )
-
-    da[var_name] = da[var_name].astype('float32')
 
     return da
 
@@ -452,13 +449,9 @@ class GFSDataProcessor:
         desired_level = 0
         for var_name in ['lsm', 'orog']:
             da = get_dataarray(grbs, var_name, levelType, desired_level)
-            da['latitude'] = da['latitude'].astype('float32')
-            da['longitude'] = da['longitude'].astype('float32')
             ds = xr.merge([ds, da])
 
         ds = ds.rename({
-            'latitude': 'lat',
-            'longitude': 'lon',
             'lsm': 'land_sea_mask',
             'orog': 'geopotential_at_surface',
             'prmsl': 'mean_sea_level_pressure',
@@ -476,11 +469,6 @@ class GFSDataProcessor:
 
         ds = ds.assign_coords(datetime=ds.time)
 
-        # Change data type
-        ds['latitude'] = ds['latitude'].astype('float32')
-        ds['longitude'] = ds['longitude'].astype('float32')
-        ds['level'] = ds['level'].astype('int32')
-         
         # Adjust time values relative to the first time step
         ds['time'] = ds['time'] - ds.time[0]
 
