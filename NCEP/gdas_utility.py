@@ -436,8 +436,6 @@ class GFSDataProcessor:
                                 mergeDAs.append(get_dataarray(grbs, var_name, levelType, desired_level))
         
                     ds = xr.merge(mergeDAs)
-                    ds['latitude'] = ds['latitude'].astype('float32')
-                    ds['longitude'] = ds['longitude'].astype('float32')
 
                     mergeDSs.append(ds)
                     ds.close()
@@ -477,6 +475,15 @@ class GFSDataProcessor:
         })
 
         ds = ds.assign_coords(datetime=ds.time)
+
+        # Change data type
+        ds['latitude'] = ds['latitude'].astype('float32')
+        ds['longitude'] = ds['longitude'].astype('float32')
+        ds['level'] = ds['level'].astype('int32')
+         
+        # Adjust time values relative to the first time step
+        ds['time'] = ds['time'] - ds.time[0]
+
         # Expand dimensions
         ds = ds.expand_dims(dim='batch')
         ds['datetime'] = ds['datetime'].expand_dims(dim='batch')
@@ -488,6 +495,9 @@ class GFSDataProcessor:
         # Update geopotential unit to m2/s2 by multiplying 9.80665
         ds['geopotential_at_surface'] = ds['geopotential_at_surface'] * 9.80665
         ds['geopotential'] = ds['geopotential'] * 9.80665
+
+        # Update total_precipitation_6hr unit to (m) from (kg/m^2) by dividing it by 1000kg/m³
+        ds['total_precipitation_6hr'] = ds['total_precipitation_6hr'] / 1000
 
         # Define the output NetCDF file
         date = (self.start_datetime + timedelta(hours=6)).strftime('%Y%m%d%H')
