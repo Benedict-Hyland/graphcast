@@ -43,6 +43,16 @@ conda install --channel conda-forge cartopy
 pip install --upgrade https://github.com/deepmind/graphcast/archive/master.zip
 ```
 
+If you would like to save as grib2 format, two more packages are needed:
+
+```bash
+conda install conda-forge::iris
+````
+
+```bash
+conda install conda-forge::iris-grib
+````
+
 This will install the packages and most of their dependencies.
 
 

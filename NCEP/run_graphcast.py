@@ -4,8 +4,10 @@ Author: Sadegh Sadeghi Tabas (sadegh.tabas@noaa.gov)
 Revision history:
     -20231218: Sadegh Tabas, initial code
     -20240118: Sadegh Tabas, S3 bucket module to upload data, adding forecast length, Updating batch dataset to account for forecast length
+    -20240125: Linlin Cui, added acapability to save output as grib2 format
 '''
 import argparse
+from datetime import timedelta
 import dataclasses
 import functools
 import math
@@ -16,6 +18,8 @@ import numpy as np
 import xarray
 import boto3
 import os
+import iris
+import pandas as pd
 
 from graphcast import autoregressive
 from graphcast import casting
@@ -24,6 +28,9 @@ from graphcast import data_utils
 from graphcast import graphcast
 from graphcast import normalization
 from graphcast import rollout
+
+
+import utils 
 
 class GraphCastModel:
     def __init__(self):
@@ -39,6 +46,7 @@ class GraphCastModel:
         self.targets = None
         self.forcings = None
         self.s3_bucket_name = "noaa-nws-graphcastgfs-pds"
+        self.start_datetime = None
 
     def load_pretrained_model(self, pretrained_model_path):
         """Load pre-trained GraphCast model."""
@@ -54,6 +62,7 @@ class GraphCastModel:
         #with open(gdas_data_path, "rb") as f:
         #    self.current_batch = xarray.load_dataset(f).compute()
         self.current_batch = xarray.load_dataset(gdas_data_path).compute()
+        self.start_datetime =  pd.to_datetime(self.current_batch.datetime[0][0].values)
         
         if (forecast_length + 2) > len(self.current_batch['time']):
             print('Updating batch dataset to account for forecast length')
@@ -139,12 +148,32 @@ class GraphCastModel:
         self.load_model()
             
         # output = self.model(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
-        forecasts = rollout.chunked_prediction(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
+        forecasts = rollout.chunked_prediction(self.model, rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
         
-        # save forecasts
-        forecasts.to_netcdf(f"{fname}")
+        # check output format
+        if fname.endswith('grib2'):
+            # drop "batch" from variables
+            for var in forecast.variables:
+                if 'batch' in forecast[var].dims:
+                    forecast[var] = forecast[var].squeeze(dim='batch')
 
-        print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
+            #update "level" attributes
+            forecast['level'] = forecast['level'] * 100
+            forecast['level'].attrs['long_name'] = 'pressure'
+            forecast['level'].attrs['units'] = 'Pa'
+
+            #save netcdf to file
+            new_fname = f"{fname.split('.')[0]}.nc"
+            forecast.to_netcdf(f"{new_fname}")
+
+            #extract time slab and save as grib2 format
+            utils.save_grib2(self.start_datetime, new_fname)
+
+        # save forecasts
+        else:
+            forecasts.to_netcdf(f"{fname}")
+
+            print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
 
     
     def upload_to_s3(self, input_file, output_file, keep_data=False):
