@@ -68,7 +68,7 @@ def save_grib2(start_datetime, filename, outdir):
     new_time_points = [new_time_unit.date2num(dt) for dt in datevectors]
     new_time_coord = iris.coords.DimCoord(new_time_points, standard_name='time', units=new_time_unit)
 
-    for date in datevectors[:2]:
+    for date in datevectors:
         print(f"Processing for time {date.strftime('%Y-%m-%d %H:00:00')}")
         hrs = int((date - start_datetime).total_seconds() // 3600)
         outfile = str(outdir / f'graphcastgfs.t{cycle:02d}z.f{hrs:03d}.grib2')
