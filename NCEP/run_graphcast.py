@@ -8,6 +8,7 @@ Revision history:
 '''
 import argparse
 from datetime import timedelta
+import pathlib
 import dataclasses
 import functools
 import math
@@ -18,7 +19,6 @@ import numpy as np
 import xarray
 import boto3
 import os
-import iris
 import pandas as pd
 
 from graphcast import autoregressive
@@ -30,7 +30,7 @@ from graphcast import normalization
 from graphcast import rollout
 
 
-import utils 
+import utils
 
 class GraphCastModel:
     def __init__(self):
@@ -146,12 +146,16 @@ class GraphCastModel:
 
         print (f"start running GraphCast for {forecast_length} steps --> {forecast_length*6} hours.")
         self.load_model()
-            
+           
         # output = self.model(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
         forecasts = rollout.chunked_prediction(self.model, rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
         
         # check output format
         if fname.endswith('grib2'):
+
+            path = pathlib.Path(fname)
+            outdir = path.parent
+
             # drop "batch" from variables
             for var in forecast.variables:
                 if 'batch' in forecast[var].dims:
@@ -167,7 +171,9 @@ class GraphCastModel:
             forecast.to_netcdf(f"{new_fname}")
 
             #extract time slab and save as grib2 format
-            utils.save_grib2(self.start_datetime, new_fname)
+            utils.save_grib2(self.start_datetime, new_fname, outdir)
+
+            print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in grib2 format in the following directory:\n {outdir}")
 
         # save forecasts
         else:

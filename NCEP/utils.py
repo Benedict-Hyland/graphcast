@@ -10,6 +10,8 @@
 from datetime import datetime, timedelta
 import cf_units
 import iris
+import iris_grib
+import eccodes
 
 ATTR_MAPS = {
     '10m_u_component_of_wind': [10, 'x_wind', 'm s**-1'],
@@ -25,8 +27,25 @@ ATTR_MAPS = {
     'v_component_of_wind': [None, 'y_wind', 'm s**-1'],
 }
 
+def tweaked_messages(cube, time_range):
+    for cube, grib_message in iris_grib.save_pairs_from_cube(cube):
+        if cube.standard_name == 'precipitation_amount':
+            eccodes.codes_set(grib_message, 'stepType', 'accum')
+            eccodes.codes_set(grib_message, 'stepRange', time_range)
+            eccodes.codes_set(grib_message, 'discipline', 0)
+            eccodes.codes_set(grib_message, 'parameterCategory', 1)
+            eccodes.codes_set(grib_message, 'parameterNumber', 52)
+            eccodes.codes_set(grib_message, 'typeOfFirstFixedSurface', 1)
+            eccodes.codes_set(grib_message, 'typeOfStatisticalProcessing', 1)
 
-def save_grib2(start_datetime, filename):
+        elif cube.standard_name == 'air_pressure_at_sea_level':
+            eccodes.codes_set(grib_message, 'discipline', 0)
+            eccodes.codes_set(grib_message, 'parameterCategory', 3)
+            eccodes.codes_set(grib_message, 'parameterNumber', 1)
+
+    yield grib_message
+
+def save_grib2(start_datetime, filename, outdir):
     """Convert netcdf file to grib2 format file
 
     Args:
@@ -40,6 +59,7 @@ def save_grib2(start_datetime, filename):
     cubes = iris.load(filename)
     times = cubes[0].coord('time').points
     datevectors = [start_datetime + timedelta(hours=int(t)) for t in times]
+    cycle = start_datetime.hour
 
     time_fmt_str = '00:00:00'
     time_unit_str = f"Hours since {start_datetime.strftime('%Y-%m-%d %H:00:00')}"
@@ -48,10 +68,12 @@ def save_grib2(start_datetime, filename):
     new_time_points = [new_time_unit.date2num(dt) for dt in datevectors]
     new_time_coord = iris.coords.DimCoord(new_time_points, standard_name='time', units=new_time_unit)
 
-    for date in datevectors:
+    for date in datevectors[:2]:
         print(f"Processing for time {date.strftime('%Y-%m-%d %H:00:00')}")
         hrs = int((date - start_datetime).total_seconds() // 3600)
-        print(hrs)
+        outfile = str(outdir / f'graphcastgfs.t{cycle:02d}z.f{hrs:03d}.grib2')
+     
+        print(outfile)
     
         new_list = []
     
@@ -75,29 +97,20 @@ def save_grib2(start_datetime, filename):
                     cube_slice_level.standard_name = ATTR_MAPS[var_name][1]
                     cube_slice_level.units = ATTR_MAPS[var_name][2]
                     cube_slice_level.long_name = var_name
-                    new_list.append(cube_slice_level)
+                    iris.save(cube_slice_level, outfile, append=True)
             else:
                 cube_slice.add_aux_coord(iris.coords.DimCoord(hrs, standard_name='forecast_period', units='hours'))
-    
-                if var_name not in ['mean_sea_level_pressure', 'total_precipitation_6hr']:
-                    cube_slice.add_aux_coord(iris.coords.DimCoord(ATTR_MAPS[var_name][0], standard_name='height', units='m'))
-                #TODO: figure out how to set levelType to meanSea
-                #if var_name == 'mean_sea_level_pressure':
-                #    cube_slice.add_aux_coord(iris.coords.DimCoord(ATTR_MAPS[var_name][0], standard_name='height', units='m'))
-    
-                #This part is not working right now, may look into eccodes sourcecode
-                if var_name == 'total_precipitation_6hr':
-                    cube_slice.stepType = 'accum'
-                    cube_slice.stepRange = f'{hrs-6}-{hrs}'
-                    cube_slice.stepUnits = 1
-                    cube_slice.step = 6
-                    cube_slice.startStep = hrs - 6
-                    cube_slice.endStep = hrs
-    
                 cube_slice.standard_name = ATTR_MAPS[var_name][1]
                 cube_slice.units = ATTR_MAPS[var_name][2]
                 cube_slice.long_name = var_name
-                new_list.append(cube_slice)
-        
-        cycle = start_datetime.hour
-        iris.save(new_list, f'graphcast.t{cycle:02d}z.f{hrs:03d}.grib2')
+    
+                if var_name not in ['mean_sea_level_pressure', 'total_precipitation_6hr']:
+                    cube_slice.add_aux_coord(iris.coords.DimCoord(ATTR_MAPS[var_name][0], standard_name='height', units='m'))
+                    iris.save(cube_slice, outfile, append=True)
+
+                elif var_name == 'total_precipitation_6hr':
+                    iris_grib.save_messages(tweaked_messages(cube_slice, f'{hrs-6}-{hrs}'), outfile, append=True)
+
+                elif var_name == 'mean_sea_level_pressure':
+                    cube_slice.add_aux_coord(iris.coords.DimCoord(ATTR_MAPS[var_name][0], standard_name='altitude', units='m'))
+                    iris_grib.save_messages(tweaked_messages(cube_slice, f'{hrs-6}-{hrs}'), outfile, append=True)
