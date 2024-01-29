@@ -15,7 +15,7 @@ import eccodes
 
 ATTR_MAPS = {
     '10m_u_component_of_wind': [10, 'x_wind', 'm s**-1'],
-    '10m_v_component_of_wind': [10, 'x_wind', 'm s**-1'],
+    '10m_v_component_of_wind': [10, 'y_wind', 'm s**-1'],
     'mean_sea_level_pressure': [0, 'air_pressure_at_sea_level', 'Pa'],
     '2m_temperature': [2, 'air_temperature', 'K'],
     'total_precipitation_6hr': [0, 'precipitation_amount', 'kg m**-2'],
@@ -42,6 +42,7 @@ def tweaked_messages(cube, time_range):
             eccodes.codes_set(grib_message, 'discipline', 0)
             eccodes.codes_set(grib_message, 'parameterCategory', 3)
             eccodes.codes_set(grib_message, 'parameterNumber', 1)
+            eccodes.codes_set(grib_message, 'typeOfFirstFixedSurface', 102)
 
     yield grib_message
 
@@ -71,7 +72,7 @@ def save_grib2(start_datetime, filename, outdir):
     for date in datevectors:
         print(f"Processing for time {date.strftime('%Y-%m-%d %H:00:00')}")
         hrs = int((date - start_datetime).total_seconds() // 3600)
-        outfile = str(outdir / f'graphcastgfs.t{cycle:02d}z.f{hrs:03d}.grib2')
+        outfile = str(outdir / f'graphcastgfs.t{cycle:02d}z.f{hrs:03d}')
      
         print(outfile)
     
@@ -96,17 +97,18 @@ def save_grib2(start_datetime, filename, outdir):
                     cube_slice_level.add_aux_coord(iris.coords.DimCoord(hrs, standard_name='forecast_period', units='hours'))
                     cube_slice_level.standard_name = ATTR_MAPS[var_name][1]
                     cube_slice_level.units = ATTR_MAPS[var_name][2]
-                    cube_slice_level.long_name = var_name
-                    iris.save(cube_slice_level, outfile, append=True)
+                    cube_slice_level.short_name = ATTR_MAPS[var_name][3]
+                    iris.save(cube_slice_level, outfile, saver='grib2', append=True)
             else:
                 cube_slice.add_aux_coord(iris.coords.DimCoord(hrs, standard_name='forecast_period', units='hours'))
                 cube_slice.standard_name = ATTR_MAPS[var_name][1]
                 cube_slice.units = ATTR_MAPS[var_name][2]
-                cube_slice.long_name = var_name
+                #cube_slice.long_name = var_name
+                cube_slice.short_name = ATTR_MAPS[var_name][3]
     
                 if var_name not in ['mean_sea_level_pressure', 'total_precipitation_6hr']:
                     cube_slice.add_aux_coord(iris.coords.DimCoord(ATTR_MAPS[var_name][0], standard_name='height', units='m'))
-                    iris.save(cube_slice, outfile, append=True)
+                    iris.save(cube_slice, outfile, saver='grib2', append=True)
 
                 elif var_name == 'total_precipitation_6hr':
                     iris_grib.save_messages(tweaked_messages(cube_slice, f'{hrs-6}-{hrs}'), outfile, append=True)
@@ -114,3 +116,4 @@ def save_grib2(start_datetime, filename, outdir):
                 elif var_name == 'mean_sea_level_pressure':
                     cube_slice.add_aux_coord(iris.coords.DimCoord(ATTR_MAPS[var_name][0], standard_name='altitude', units='m'))
                     iris_grib.save_messages(tweaked_messages(cube_slice, f'{hrs-6}-{hrs}'), outfile, append=True)
+

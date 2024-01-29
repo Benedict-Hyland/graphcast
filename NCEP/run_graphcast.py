@@ -9,6 +9,7 @@ Revision history:
 import argparse
 from datetime import timedelta
 import pathlib
+import glob
 import dataclasses
 import functools
 import math
@@ -149,45 +150,51 @@ class GraphCastModel:
            
         # output = self.model(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
         forecasts = rollout.chunked_prediction(self.model, rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
-        
-        # check output format
-        if fname.endswith('grib2'):
-
-            path = pathlib.Path(fname)
-            outdir = path.parent
-
-            # drop "batch" from variables
-            for var in forecast.variables:
-                if 'batch' in forecast[var].dims:
-                    forecast[var] = forecast[var].squeeze(dim='batch')
-
-            #update "level" attributes
-            forecast['level'] = forecast['level'] * 100
-            forecast['level'].attrs['long_name'] = 'pressure'
-            forecast['level'].attrs['units'] = 'Pa'
-
-            #save netcdf to file
-            new_fname = f"{fname.split('.')[0]}.nc"
-            forecast.to_netcdf(f"{new_fname}")
-
-            #extract time slab and save as grib2 format
-            utils.save_grib2(self.start_datetime, new_fname, outdir)
-
-            print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in grib2 format in the following directory:\n {outdir}")
 
         # save forecasts
-        else:
-            forecasts.to_netcdf(f"{fname}")
+        forecasts.to_netcdf(f"{fname}")
+        print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
+        
+        #Save as grib2 format 
+        path = pathlib.Path(fname)
+        outdir = path.parent
 
-            print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
+        #read from pre-downloaded file so that spinning up for testing
+        #forecasts = xarray.open_dataset('forecast_date-2024012900_res-0.25_levels-13_steps-40.nc')
 
+        #reverse along latitude so that field is norht=>south in grib format
+        forecasts = forecasts.reindex(lat=list(reversed(forecasts.lat)))
+
+        # drop "batch" from variables
+        for var in forecasts.variables:
+            if 'batch' in forecasts[var].dims:
+                forecasts[var] = forecasts[var].squeeze(dim='batch')
+
+        #update units
+        forecasts['level'] = forecasts['level'] * 100
+        forecasts['level'].attrs['long_name'] = 'pressure'
+        forecasts['level'].attrs['units'] = 'Pa'
+
+        forecasts['geopotential'] = forecasts['geopotential'] / 9.80665
+        forecasts['total_precipitation_6hr'] = forecasts['total_precipitation_6hr'] * 1000
+
+        new_fname = outdir / f"forecast_new.nc"
+        forecasts.to_netcdf(f"{new_fname}")
+
+        #extract time slab and save as grib2 format
+        utils.save_grib2(self.start_datetime, new_fname, outdir)
+
+        #remove intermediate nc file
+        if os.path.isfile(new_fname):
+            print(f'Deleting intermediate nc file {new_fname}: ')
+            os.remove(new_fname)
+        
     
-    def upload_to_s3(self, input_file, output_file, keep_data=False):
+    def upload_to_s3(self, input_file, output_files, keep_data=False):
         s3 = boto3.client('s3')
 
         # Extract date and time information from the input file name
         input_file_name = os.path.basename(input_file)
-        output_file_name = os.path.basename(output_file)
         
         date_start = input_file_name.find("date-")
 
@@ -202,26 +209,30 @@ class GraphCastModel:
 
         # Define S3 key paths for input and output files
         input_s3_key = f'graphcastgfs.{date}/{time}/input/{input_file_name}'
-        output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file_name}'
 
         # Upload input file to S3
         s3.upload_file(input_file, self.s3_bucket_name, input_s3_key)
     
         # Upload output file to S3
-        s3.upload_file(output_file, self.s3_bucket_name, output_s3_key)
+        for output_file in output_files:
+            print(f'Uploading file {output_file} to s3 bucket')
+            output_file_name = os.path.basename(output_file)
+            output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file_name}'
+            s3.upload_file(output_file_name, fname, self.s3_bucket_name, output_s3_key)
+            
+            if not keep_data:
+                os.remove(output_file)
 
         # Delete local files if keep_data is False
         if not keep_data:
             os.remove(input_file)
-            os.remove(output_file)
             print("Local input and output files deleted.")
-        
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run GraphCast model.")
     parser.add_argument("-i", "--input", help="input file path (including file name)", required=True)
-    parser.add_argument("-o", "--output", help="output file path (including file name)", required=True)
+    parser.add_argument("-o", "--output", help="output netcdf file path (including file name)", required=True)
     parser.add_argument("-w", "--weights", help="parent directory of the graphcast params and stats", required=True)
     parser.add_argument("-l", "--length", help="length of forecast (6-hourly), an integer number in range [1, 40]", required=True)
     parser.add_argument("-u", "--upload", help="upload input data as well as forecasts to noaa s3 bucket (yes or no)", default = "no")
@@ -241,5 +252,10 @@ if __name__ == "__main__":
     runner.get_predictions(args.output, int(args.length))
     upload_data = args.upload.lower() == "yes"
     keep_data = args.keep.lower() == "yes"
+
+    output_files = glob.glob('graphcastgfs*')
+    output_files.sort()
+    output_files.append(args.output)
+
     if upload_data:
-        runner.upload_to_s3(args.input, args.output, keep_data)
+        runner.upload_to_s3(args.input, output_files, keep_data)
