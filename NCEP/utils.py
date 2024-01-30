@@ -76,8 +76,6 @@ def save_grib2(start_datetime, filename, outdir):
      
         print(outfile)
     
-        new_list = []
-    
         for cube in cubes:
             var_name = cube.name()
         
