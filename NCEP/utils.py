@@ -34,7 +34,7 @@ def tweaked_messages(cube, time_range):
             eccodes.codes_set(grib_message, 'stepRange', time_range)
             eccodes.codes_set(grib_message, 'discipline', 0)
             eccodes.codes_set(grib_message, 'parameterCategory', 1)
-            eccodes.codes_set(grib_message, 'parameterNumber', 52)
+            eccodes.codes_set(grib_message, 'parameterNumber', 8)
             eccodes.codes_set(grib_message, 'typeOfFirstFixedSurface', 1)
             eccodes.codes_set(grib_message, 'typeOfStatisticalProcessing', 1)
 
@@ -97,14 +97,12 @@ def save_grib2(start_datetime, filename, outdir):
                     cube_slice_level.add_aux_coord(iris.coords.DimCoord(hrs, standard_name='forecast_period', units='hours'))
                     cube_slice_level.standard_name = ATTR_MAPS[var_name][1]
                     cube_slice_level.units = ATTR_MAPS[var_name][2]
-                    cube_slice_level.short_name = ATTR_MAPS[var_name][3]
                     iris.save(cube_slice_level, outfile, saver='grib2', append=True)
             else:
                 cube_slice.add_aux_coord(iris.coords.DimCoord(hrs, standard_name='forecast_period', units='hours'))
                 cube_slice.standard_name = ATTR_MAPS[var_name][1]
                 cube_slice.units = ATTR_MAPS[var_name][2]
                 #cube_slice.long_name = var_name
-                cube_slice.short_name = ATTR_MAPS[var_name][3]
     
                 if var_name not in ['mean_sea_level_pressure', 'total_precipitation_6hr']:
                     cube_slice.add_aux_coord(iris.coords.DimCoord(ATTR_MAPS[var_name][0], standard_name='height', units='m'))
