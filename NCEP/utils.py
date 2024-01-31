@@ -42,7 +42,7 @@ def tweaked_messages(cube, time_range):
             eccodes.codes_set(grib_message, 'discipline', 0)
             eccodes.codes_set(grib_message, 'parameterCategory', 3)
             eccodes.codes_set(grib_message, 'parameterNumber', 1)
-            eccodes.codes_set(grib_message, 'typeOfFirstFixedSurface', 102)
+            eccodes.codes_set(grib_message, 'typeOfFirstFixedSurface', 101)
 
     yield grib_message
 
