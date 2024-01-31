@@ -46,11 +46,11 @@ def tweaked_messages(cube, time_range):
 
     yield grib_message
 
-def save_grib2(start_datetime, filename, outdir):
+def save_grib2(dates, filename, outdir):
     """Convert netcdf file to grib2 format file
 
     Args:
-      start_datetime: datetime object, which specify model's start time
+      dates: array of datetime object, from source file
       filename: file name, including the path
 
     Returns:
@@ -59,11 +59,17 @@ def save_grib2(start_datetime, filename, outdir):
 
     cubes = iris.load(filename)
     times = cubes[0].coord('time').points
-    datevectors = [start_datetime + timedelta(hours=int(t)) for t in times]
-    cycle = start_datetime.hour
+
+    model_starttime = dates[0][0]
+    cycle = model_starttime.hour
+
+    forecast_starttime = dates[0][1]
+    print(f'Forecast start time is {forecast_starttime}')
+    #get forecast datevectors
+    datevectors = [forecast_starttime + timedelta(hours=int(t)) for t in times]
 
     time_fmt_str = '00:00:00'
-    time_unit_str = f"Hours since {start_datetime.strftime('%Y-%m-%d %H:00:00')}"
+    time_unit_str = f"Hours since {forecast_starttime.strftime('%Y-%m-%d %H:00:00')}"
     time_coord = cubes[0].coord('time')
     new_time_unit = cf_units.Unit(time_unit_str, calendar=cf_units.CALENDAR_STANDARD)
     new_time_points = [new_time_unit.date2num(dt) for dt in datevectors]
@@ -71,7 +77,7 @@ def save_grib2(start_datetime, filename, outdir):
 
     for date in datevectors:
         print(f"Processing for time {date.strftime('%Y-%m-%d %H:00:00')}")
-        hrs = int((date - start_datetime).total_seconds() // 3600)
+        hrs = int((date - model_starttime).total_seconds() // 3600)
         outfile = str(outdir / f'graphcastgfs.t{cycle:02d}z.f{hrs:03d}')
      
         print(outfile)

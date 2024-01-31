@@ -47,7 +47,7 @@ class GraphCastModel:
         self.targets = None
         self.forcings = None
         self.s3_bucket_name = "noaa-nws-graphcastgfs-pds"
-        self.start_datetime = None
+        self.dates = None
 
     def load_pretrained_model(self, pretrained_model_path):
         """Load pre-trained GraphCast model."""
@@ -63,7 +63,7 @@ class GraphCastModel:
         #with open(gdas_data_path, "rb") as f:
         #    self.current_batch = xarray.load_dataset(f).compute()
         self.current_batch = xarray.load_dataset(gdas_data_path).compute()
-        self.start_datetime =  pd.to_datetime(self.current_batch.datetime[0][0].values)
+        self.dates =  pd.to_datetime(self.current_batch.datetime.values)
         
         if (forecast_length + 2) > len(self.current_batch['time']):
             print('Updating batch dataset to account for forecast length')
@@ -182,7 +182,7 @@ class GraphCastModel:
         forecasts.to_netcdf(f"{new_fname}")
 
         #extract time slab and save as grib2 format
-        utils.save_grib2(self.start_datetime, new_fname, outdir)
+        utils.save_grib2(self.dates, new_fname, outdir)
 
         #remove intermediate nc file
         if os.path.isfile(new_fname):
