@@ -48,6 +48,7 @@ class GraphCastModel:
         self.forcings = None
         self.s3_bucket_name = "noaa-nws-graphcastgfs-pds"
         self.dates = None
+        self.outdir = None
 
     def load_pretrained_model(self, pretrained_model_path):
         """Load pre-trained GraphCast model."""
@@ -157,7 +158,7 @@ class GraphCastModel:
         
         #Save as grib2 format 
         path = pathlib.Path(fname)
-        outdir = path.parent
+        self.outdir = path.parent
 
         #read from pre-downloaded file so that spinning up for testing
         #forecasts = xarray.open_dataset('forecast_date-2024012900_res-0.25_levels-13_steps-40.nc')
@@ -178,11 +179,11 @@ class GraphCastModel:
         forecasts['geopotential'] = forecasts['geopotential'] / 9.80665
         forecasts['total_precipitation_6hr'] = forecasts['total_precipitation_6hr'] * 1000
 
-        new_fname = outdir / f"forecast_new.nc"
+        new_fname = self.outdir / f"forecast_new.nc"
         forecasts.to_netcdf(f"{new_fname}")
 
         #extract time slab and save as grib2 format
-        utils.save_grib2(self.dates, new_fname, outdir)
+        utils.save_grib2(self.dates, new_fname, self.outdir)
 
         #remove intermediate nc file
         if os.path.isfile(new_fname):
@@ -190,7 +191,7 @@ class GraphCastModel:
             os.remove(new_fname)
         
     
-    def upload_to_s3(self, input_file, output_files, keep_data=False):
+    def upload_to_s3(self, input_file, output_file, keep_data=False):
         s3 = boto3.client('s3')
 
         # Extract date and time information from the input file name
@@ -208,25 +209,37 @@ class GraphCastModel:
     
 
         # Define S3 key paths for input and output files
-        input_s3_key = f'graphcastgfs.{date}/{time}/input/{input_file_name}'
+        input_s3_key = f'graphcastgfs.{date}/{time}/input/{input_file}'
+        output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file}'
 
         # Upload input file to S3
         s3.upload_file(input_file, self.s3_bucket_name, input_s3_key)
-    
-        # Upload output file to S3
-        for output_file in output_files:
-            print(f'Uploading file {output_file} to s3 bucket')
-            output_file_name = os.path.basename(output_file)
-            output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file_name}'
-            s3.upload_file(output_file_name, fname, self.s3_bucket_name, output_s3_key)
-            
-            if not keep_data:
-                os.remove(output_file)
+
+        # Upload output nc file to S3
+        s3.upload_file(output_file, self.s3_bucket_name, output_s3_key)
 
         # Delete local files if keep_data is False
         if not keep_data:
             os.remove(input_file)
+            os.remove(output_file)
             print("Local input and output files deleted.")
+
+        # Upload output grib2 file to S3
+        if self.outdir is None:
+            path = pathlib.Path(output_file)
+            self.outdir = path.parent
+
+        output_files = glob.glob(f'{str(self.outdir)}/gcgfs*')
+        output_files.sort()
+    
+        for output_file in output_files:
+            print(f'Uploading file {output_file} to s3 bucket')
+            output_file_name = os.path.basename(output_file)
+            output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file_name}'
+            s3.upload_file(output_file, self.s3_bucket_name, output_s3_key)
+            
+            if not keep_data:
+                os.remove(output_file)
 
 
 if __name__ == "__main__":
@@ -253,9 +266,5 @@ if __name__ == "__main__":
     upload_data = args.upload.lower() == "yes"
     keep_data = args.keep.lower() == "yes"
 
-    output_files = glob.glob('graphcastgfs*')
-    output_files.sort()
-    output_files.append(args.output)
-
     if upload_data:
-        runner.upload_to_s3(args.input, output_files, keep_data)
+        runner.upload_to_s3(args.input, args.output, keep_data)

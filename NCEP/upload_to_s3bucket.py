@@ -1,5 +1,4 @@
 import argparse
-import glob
 from run_graphcast import GraphCastModel
 
 def upload_to_s3_wrapper(input_path, output_path, keep):
@@ -14,8 +13,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     keep = False
 
-    output_files = glob.glob('graphcastgfs*')
-    output_files.sort()
-    output_files.append(args.output)
-
-    upload_to_s3_wrapper(args.input, output_files, keep)
+    upload_to_s3_wrapper(args.input, args.output, keep)
