@@ -1,2 +1,2 @@
 #!/bin/bash
-sbatch /lustre/Sadegh.Tabas/graphcast/NCEP/gc_job_cloud.sh
+sbatch /contrib/Sadegh.Tabas/operational/graphcast/NCEP/gc_job_cloud.sh

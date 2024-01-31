@@ -4,8 +4,12 @@ Author: Sadegh Sadeghi Tabas (sadegh.tabas@noaa.gov)
 Revision history:
     -20231218: Sadegh Tabas, initial code
     -20240118: Sadegh Tabas, S3 bucket module to upload data, adding forecast length, Updating batch dataset to account for forecast length
+    -20240125: Linlin Cui, added acapability to save output as grib2 format
 '''
 import argparse
+from datetime import timedelta
+import pathlib
+import glob
 import dataclasses
 import functools
 import math
@@ -16,6 +20,7 @@ import numpy as np
 import xarray
 import boto3
 import os
+import pandas as pd
 
 from graphcast import autoregressive
 from graphcast import casting
@@ -24,6 +29,9 @@ from graphcast import data_utils
 from graphcast import graphcast
 from graphcast import normalization
 from graphcast import rollout
+
+
+import utils
 
 class GraphCastModel:
     def __init__(self):
@@ -39,6 +47,8 @@ class GraphCastModel:
         self.targets = None
         self.forcings = None
         self.s3_bucket_name = "noaa-nws-graphcastgfs-pds"
+        self.dates = None
+        self.outdir = None
 
     def load_pretrained_model(self, pretrained_model_path):
         """Load pre-trained GraphCast model."""
@@ -54,6 +64,7 @@ class GraphCastModel:
         #with open(gdas_data_path, "rb") as f:
         #    self.current_batch = xarray.load_dataset(f).compute()
         self.current_batch = xarray.load_dataset(gdas_data_path).compute()
+        self.dates =  pd.to_datetime(self.current_batch.datetime.values)
         
         if (forecast_length + 2) > len(self.current_batch['time']):
             print('Updating batch dataset to account for forecast length')
@@ -137,22 +148,54 @@ class GraphCastModel:
 
         print (f"start running GraphCast for {forecast_length} steps --> {forecast_length*6} hours.")
         self.load_model()
-            
+           
         # output = self.model(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
-        forecasts = rollout.chunked_prediction(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
-        
+        forecasts = rollout.chunked_prediction(self.model, rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
+
         # save forecasts
         forecasts.to_netcdf(f"{fname}")
-
         print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
+        
+        #Save as grib2 format 
+        path = pathlib.Path(fname)
+        self.outdir = path.parent
 
+        #read from pre-downloaded file so that spinning up for testing
+        #forecasts = xarray.open_dataset('forecast_date-2024012900_res-0.25_levels-13_steps-40.nc')
+
+        #reverse along latitude so that field is norht=>south in grib format
+        forecasts = forecasts.reindex(lat=list(reversed(forecasts.lat)))
+
+        # drop "batch" from variables
+        for var in forecasts.variables:
+            if 'batch' in forecasts[var].dims:
+                forecasts[var] = forecasts[var].squeeze(dim='batch')
+
+        #update units
+        forecasts['level'] = forecasts['level'] * 100
+        forecasts['level'].attrs['long_name'] = 'pressure'
+        forecasts['level'].attrs['units'] = 'Pa'
+
+        forecasts['geopotential'] = forecasts['geopotential'] / 9.80665
+        forecasts['total_precipitation_6hr'] = forecasts['total_precipitation_6hr'] * 1000
+
+        new_fname = self.outdir / f"forecast_new.nc"
+        forecasts.to_netcdf(f"{new_fname}")
+
+        #extract time slab and save as grib2 format
+        utils.save_grib2(self.dates, new_fname, self.outdir)
+
+        #remove intermediate nc file
+        if os.path.isfile(new_fname):
+            print(f'Deleting intermediate nc file {new_fname}: ')
+            os.remove(new_fname)
+        
     
     def upload_to_s3(self, input_file, output_file, keep_data=False):
         s3 = boto3.client('s3')
 
         # Extract date and time information from the input file name
         input_file_name = os.path.basename(input_file)
-        output_file_name = os.path.basename(output_file)
         
         date_start = input_file_name.find("date-")
 
@@ -166,13 +209,13 @@ class GraphCastModel:
     
 
         # Define S3 key paths for input and output files
-        input_s3_key = f'graphcastgfs.{date}/{time}/input/{input_file_name}'
-        output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file_name}'
+        input_s3_key = f'graphcastgfs.{date}/{time}/input/{input_file}'
+        output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file}'
 
         # Upload input file to S3
         s3.upload_file(input_file, self.s3_bucket_name, input_s3_key)
-    
-        # Upload output file to S3
+
+        # Upload output nc file to S3
         s3.upload_file(output_file, self.s3_bucket_name, output_s3_key)
 
         # Delete local files if keep_data is False
@@ -180,13 +223,29 @@ class GraphCastModel:
             os.remove(input_file)
             os.remove(output_file)
             print("Local input and output files deleted.")
-        
+
+        # Upload output grib2 file to S3
+        if self.outdir is None:
+            path = pathlib.Path(output_file)
+            self.outdir = path.parent
+
+        output_files = glob.glob(f'{str(self.outdir)}/gcgfs*')
+        output_files.sort()
+    
+        for output_file in output_files:
+            print(f'Uploading file {output_file} to s3 bucket')
+            output_file_name = os.path.basename(output_file)
+            output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file_name}'
+            s3.upload_file(output_file, self.s3_bucket_name, output_s3_key)
+            
+            if not keep_data:
+                os.remove(output_file)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run GraphCast model.")
     parser.add_argument("-i", "--input", help="input file path (including file name)", required=True)
-    parser.add_argument("-o", "--output", help="output file path (including file name)", required=True)
+    parser.add_argument("-o", "--output", help="output netcdf file path (including file name)", required=True)
     parser.add_argument("-w", "--weights", help="parent directory of the graphcast params and stats", required=True)
     parser.add_argument("-l", "--length", help="length of forecast (6-hourly), an integer number in range [1, 40]", required=True)
     parser.add_argument("-u", "--upload", help="upload input data as well as forecasts to noaa s3 bucket (yes or no)", default = "no")
@@ -206,5 +265,6 @@ if __name__ == "__main__":
     runner.get_predictions(args.output, int(args.length))
     upload_data = args.upload.lower() == "yes"
     keep_data = args.keep.lower() == "yes"
+
     if upload_data:
         runner.upload_to_s3(args.input, args.output, keep_data)

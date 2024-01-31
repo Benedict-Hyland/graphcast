@@ -47,7 +47,7 @@ source /contrib/Sadegh.Tabas/miniconda3/etc/profile.d/conda.sh
 conda activate mlwp
 
 # going to the model directory
-cd /lustre/Sadegh.Tabas/graphcast/NCEP/
+cd /contrib/Sadegh.Tabas/operational/graphcast/NCEP/
 
 start_time=$(date +%s)
 echo "start runing gdas utility to generate graphcast inputs for: $curr_datetime"
