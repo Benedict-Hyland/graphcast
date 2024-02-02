@@ -195,7 +195,7 @@ class GFSDataProcessor:
 
         # Create a dictionary to specify the variables, levels, and whether to extract only the first time step (if needed)
         variables_to_extract = {
-            '.f000': {
+            '.pgrb2.0p25.f000': {
                 ':HGT:': {
                     'levels': [':surface:'],
                     'first_time_step_only': True,  # Extract only the first time step
@@ -213,7 +213,7 @@ class GFSDataProcessor:
                     'levels': [':(50|100|150|200|250|300|400|500|600|700|850|925|1000) mb:'],
                 },
             },
-            '.f006': {
+            '.pgrb2.0p25.f006': {
                 ':LAND:': {
                     'levels': [':surface:'],
                     'first_time_step_only': True,  # Extract only the first time step
@@ -247,7 +247,7 @@ class GFSDataProcessor:
                             levels = data['levels']
                             first_time_step_only = data.get('first_time_step_only', False)  # Default to False if not specified
 
-                            grib2_file = os.path.join(subfolder_path, f'gdas.t{hour}z.pgrb2.0p25{file_extension}')
+                            grib2_file = os.path.join(subfolder_path, f'gdas.t{hour}z{file_extension}')
                     
                             # Extract the specified variables with levels from the GRIB2 file
                             for level in levels:
@@ -356,7 +356,7 @@ class GFSDataProcessor:
 
         #Get time-varying variables
         variables_to_extract = {
-            '.f000': {
+            '.pgrb2.0p25.f000': {
                 '2t': {
                     'typeOfLevel': 'heightAboveGround',
                     'level': 2,
@@ -374,7 +374,7 @@ class GFSDataProcessor:
                     'level': [50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 850, 925, 1000],
                 },
             },
-            '.f006': {
+            '.pgrb2.0p25.f006': {
                 'tp': {  # total precipitation 
                     'typeOfLevel': 'surface',
                     'level': 0,
@@ -383,7 +383,7 @@ class GFSDataProcessor:
         }
 
         if self.num_levels == 37:
-            variables_to_extract['.f000']['w, u, v, q, t, gh']['level'] = [
+            variables_to_extract['.pgrb2.0p25.f000']['w, u, v, q, t, gh']['level'] = [
                 1, 2, 3, 5, 7, 10, 20, 30, 50, 70, 100, 
                 125, 150, 175, 200, 225, 250, 300, 350, 400,
                 450, 500, 550, 600, 650, 700, 750, 775, 800,
@@ -408,7 +408,7 @@ class GFSDataProcessor:
                     mergeDAs = []
 
                     for file_extension, variables in variables_to_extract.items():
-                        fname = os.path.join(subfolder_path, f'gdas.t{hour}z.pgrb2.0p25{file_extension}')
+                        fname = os.path.join(subfolder_path, f'gdas.t{hour}z{file_extension}')
 
                         #open grib file
                         grbs = pygrib.open(fname)
