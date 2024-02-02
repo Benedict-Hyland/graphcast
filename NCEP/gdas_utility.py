@@ -112,7 +112,7 @@ class GFSDataProcessor:
     
     def s3bucket(self, date_str, time_str, local_directory):
         # Construct the S3 prefix for the directory
-        s3_prefix = f"{self.root_directory}.{date_str}/{time_str}/"
+        s3_prefix = f"Sadegh.Tabas/gdas_wcoss2/{self.root_directory}.{date_str}/{time_str}/"
         # List objects in the S3 directory
         s3_objects = self.s3.list_objects_v2(Bucket=self.bucket_name, Prefix=s3_prefix)
 
