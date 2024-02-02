@@ -6,6 +6,7 @@ Revision history:
     -20231204: Sadegh Tabas, calculating toa incident solar radiation, parallelizing, updating units, and resolving memory issues
     -20240112: Sadegh Tabas, (i)removing Pysolar as tisr would be calc through GC, (ii) add NOMADS option for downloading data, (iii) add 37 pressure levels, (iv) configurations for hera
     -20240124: Linlin Cui, added pygrib method to extract variables from grib2 files
+    -20240205: Sadegh Tabas, add 37 pressure level for wgrib2 and pygrib, update s3 bucket
 '''
 import os
 import sys
