@@ -55,7 +55,7 @@ cd /contrib/Sadegh.Tabas/operational/graphcast/NCEP/
 start_time=$(date +%s)
 echo "start runing gdas utility to generate graphcast inputs for: $curr_datetime"
 # Run the Python script gdas.py with the calculated times
-python3 gdas_utility.py "$prev_datetime" "$curr_datetime"
+python3 gdas_utility.py "$prev_datetime" "$curr_datetime" -l "$num_pressure_levels"
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 
