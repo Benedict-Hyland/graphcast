@@ -15,7 +15,7 @@ import glob
 import argparse
 import subprocess
 from datetime import datetime, timedelta
-
+import re
 import boto3
 import xarray as xr
 import numpy as np
@@ -102,13 +102,13 @@ class GFSDataProcessor:
             custom_config_file = '/contrib/Sadegh.Tabas/.aws/config'
 
             # Set the environment variables
-            os.environ['AWS_SHARED_CREDENTIALS_FILE'] = custom_credentials_file
-            os.environ['AWS_CONFIG_FILE'] = custom_config_file
+            os.environ['AWS_SHARED_CREDENTIALS_FILE']=custom_credentials_file
+            os.environ['AWS_CONFIG_FILE']=custom_config_file
 
-            self.s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
+            self.s3 = boto3.client('s3')
     
             # Specify the S3 bucket name and root directory
-            self.bucket_name = 'noaa-gfs-bdp-pds'
+            self.bucket_name = 'noaa-ncepdev-none-ca-ufs-cpldcld'
         
         self.root_directory = 'gdas'
 
@@ -267,8 +267,18 @@ class GFSDataProcessor:
                             for level in levels:
                                 output_file = f'{variable}_{level}_{date_folder}_{hour}{file_extension}.nc'
                                 files.append(output_file)
+                                
+                                # Extracting levels using regular expression
+                                matches = re.findall(r'\d+', level)
+                                
+                                # Convert the extracted matches to integers
+                                mylevels = [int(match) for match in matches]
+                                
+                                # Get the number of levels
+                                number_of_levels = len(mylevels)
+                                
                                 # Use wgrib2 to extract the variable with level
-                                wgrib2_command = ['wgrib2', '-nc_nlev', f'{self.num_levels}', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
+                                wgrib2_command = ['wgrib2', '-nc_nlev', f'{number_of_levels}', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
                                 subprocess.run(wgrib2_command, check=True)
 
                                 # Open the extracted netcdf file as an xarray dataset
