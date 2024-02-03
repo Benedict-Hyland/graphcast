@@ -4,7 +4,7 @@ Author: Sadegh Sadeghi Tabas (sadegh.tabas@noaa.gov)
 Revision history:
     -20231218: Sadegh Tabas, initial code
     -20240118: Sadegh Tabas, S3 bucket module to upload data, adding forecast length, Updating batch dataset to account for forecast length
-    -20240125: Linlin Cui, added acapability to save output as grib2 format
+    -20240125: Linlin Cui, added a capability to save output as grib2 format
 '''
 import argparse
 from datetime import timedelta
@@ -154,9 +154,8 @@ class GraphCastModel:
 
         # save forecasts
         # forecasts.to_netcdf(f"{fname}")
-        print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
+        # print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
 
-        
         # Save as grib2 format 
         path = pathlib.Path(fname)
         self.outdir = path.parent
