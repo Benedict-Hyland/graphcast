@@ -190,7 +190,7 @@ class GraphCastModel:
     
     def upload_to_s3(self, input_file, output_file, keep_data=False):
         s3 = boto3.client('s3')
-
+        num_levels = len(self.current_batch['level'])
         # Extract date and time information from the input file name
         input_file_name = os.path.basename(input_file)
         
@@ -232,7 +232,7 @@ class GraphCastModel:
         for output_file in output_files:
             print(f'Uploading file {output_file} to s3 bucket')
             output_file_name = os.path.basename(output_file)
-            output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file_name}'
+            output_s3_key = f'graphcastgfs.{date}/{time}/forecast_levels_{num_levels}/{output_file_name}'
             s3.upload_file(output_file, self.s3_bucket_name, output_s3_key)
             
             if not keep_data:
