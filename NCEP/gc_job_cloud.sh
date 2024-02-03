@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash --login
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=30  # Use all available CPU cores
 #SBATCH --time=4:00:00  # Adjust this to your estimated run time
@@ -8,7 +8,7 @@
 #SBATCH --partition=compute
 
 # load module lib
-source /etc/profile.d/modules.sh
+# source /etc/profile.d/modules.sh
 
 # load necessary modules
 module use /contrib/spack-stack/envs/ufswm/install/modulefiles/Core/
