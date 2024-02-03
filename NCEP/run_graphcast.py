@@ -5,6 +5,7 @@ Revision history:
     -20231218: Sadegh Tabas, initial code
     -20240118: Sadegh Tabas, S3 bucket module to upload data, adding forecast length, Updating batch dataset to account for forecast length
     -20240125: Linlin Cui, added a capability to save output as grib2 format
+    -20240205: Sadegh Tabas, made the code clearer, added 37 pressure level option, updated upload to s3
 '''
 import argparse
 from datetime import timedelta
@@ -29,7 +30,6 @@ from graphcast import data_utils
 from graphcast import graphcast
 from graphcast import normalization
 from graphcast import rollout
-
 
 import utils
 
