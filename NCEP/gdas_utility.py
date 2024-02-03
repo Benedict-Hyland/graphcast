@@ -95,6 +95,16 @@ class GFSDataProcessor:
 
         if self.download_source == 's3':
             # Initialize the S3 client
+            # Specify the path to your custom AWS credentials file
+            custom_credentials_file = '/contrib/Sadegh.Tabas/.aws/credentials'
+            
+            # Specify the path to your custom AWS config file
+            custom_config_file = '/contrib/Sadegh.Tabas/.aws/config'
+
+            # Set the environment variables
+            os.environ['AWS_SHARED_CREDENTIALS_FILE'] = custom_credentials_file
+            os.environ['AWS_CONFIG_FILE'] = custom_config_file
+
             self.s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
     
             # Specify the S3 bucket name and root directory
@@ -104,9 +114,9 @@ class GFSDataProcessor:
 
         # Specify the local directory where you want to save the files
         if self.download_directory is None:
-            self.local_base_directory = os.path.join(os.getcwd(), self.bucket_name+self.num_levels)  # Use current directory if not specified
+            self.local_base_directory = os.path.join(os.getcwd(), self.bucket_name+str(self.num_levels))  # Use current directory if not specified
         else:
-            self.local_base_directory = os.path.join(self.download_directory, self.bucket_name+self.num_levels)
+            self.local_base_directory = os.path.join(self.download_directory, self.bucket_name+str(self.num_levels))
 
         # List of file formats to download
         self.file_formats = ['0p25.f000', '0p25.f006'] # , '0p25.f001'
