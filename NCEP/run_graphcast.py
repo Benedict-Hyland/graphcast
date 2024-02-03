@@ -153,17 +153,15 @@ class GraphCastModel:
         forecasts = rollout.chunked_prediction(self.model, rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
 
         # save forecasts
-        forecasts.to_netcdf(f"{fname}")
+        # forecasts.to_netcdf(f"{fname}")
         print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
+
         
-        #Save as grib2 format 
+        # Save as grib2 format 
         path = pathlib.Path(fname)
         self.outdir = path.parent
 
-        #read from pre-downloaded file so that spinning up for testing
-        #forecasts = xarray.open_dataset('forecast_date-2024012900_res-0.25_levels-13_steps-40.nc')
-
-        #reverse along latitude so that field is norht=>south in grib format
+        # reverse along latitude so that field is norht=>south in grib format
         forecasts = forecasts.reindex(lat=list(reversed(forecasts.lat)))
 
         # drop "batch" from variables
@@ -171,7 +169,7 @@ class GraphCastModel:
             if 'batch' in forecasts[var].dims:
                 forecasts[var] = forecasts[var].squeeze(dim='batch')
 
-        #update units
+        # update units
         forecasts['level'] = forecasts['level'] * 100
         forecasts['level'].attrs['long_name'] = 'pressure'
         forecasts['level'].attrs['units'] = 'Pa'
@@ -209,14 +207,14 @@ class GraphCastModel:
     
 
         # Define S3 key paths for input and output files
-        input_s3_key = f'graphcastgfs.{date}/{time}/input/{input_file}'
-        output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file}'
+        # input_s3_key = f'graphcastgfs.{date}/{time}/input/{input_file}'
+        # output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file}'
 
         # Upload input file to S3
-        s3.upload_file(input_file, self.s3_bucket_name, input_s3_key)
+        # s3.upload_file(input_file, self.s3_bucket_name, input_s3_key)
 
         # Upload output nc file to S3
-        s3.upload_file(output_file, self.s3_bucket_name, output_s3_key)
+        # s3.upload_file(output_file, self.s3_bucket_name, output_s3_key)
 
         # Delete local files if keep_data is False
         if not keep_data:
