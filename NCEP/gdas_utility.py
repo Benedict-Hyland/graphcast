@@ -114,12 +114,15 @@ class GFSDataProcessor:
 
         # Specify the local directory where you want to save the files
         if self.download_directory is None:
-            self.local_base_directory = os.path.join(os.getcwd(), self.bucket_name+str(self.num_levels))  # Use current directory if not specified
+            self.local_base_directory = os.path.join(os.getcwd(), self.bucket_name+'_'+str(self.num_levels))  # Use current directory if not specified
         else:
-            self.local_base_directory = os.path.join(self.download_directory, self.bucket_name+str(self.num_levels))
+            self.local_base_directory = os.path.join(self.download_directory, self.bucket_name+'_'+str(self.num_levels))
 
         # List of file formats to download
-        self.file_formats = ['0p25.f000', '0p25.f006'] # , '0p25.f001'
+        if self.num_levels == 13:     
+            self.file_formats = ['pgrb2.0p25.f000', 'pgrb2.0p25.f006'] # , '0p25.f001'
+        else:
+            self.file_formats = ['pgrb2.0p25.f000', 'pgrb2b.0p25.f000', 'pgrb2.0p25.f006'] # , '0p25.f001'
     
     def s3bucket(self, date_str, time_str, local_directory):
         # Construct the S3 prefix for the directory
@@ -272,10 +275,10 @@ class GFSDataProcessor:
                                 matches = re.findall(r'\d+', level)
                                 
                                 # Convert the extracted matches to integers
-                                mylevels = [int(match) for match in matches]
+                                curr_levels = [int(match) for match in matches]
                                 
                                 # Get the number of levels
-                                number_of_levels = len(mylevels)
+                                number_of_levels = len(curr_levels)
                                 
                                 # Use wgrib2 to extract the variable with level
                                 wgrib2_command = ['wgrib2', '-nc_nlev', f'{number_of_levels}', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
@@ -415,7 +418,8 @@ class GFSDataProcessor:
             ]
             variables_to_extract['.pgrb2b.0p25.f000'] = {}
             variables_to_extract['.pgrb2b.0p25.f000']['w, u, v, q, t, gh'] = {}
-            variables_to_extract['.pgrb2b.0p25.f000'][':SPFH|VVEL|VGRD|UGRD|HGT|TMP:']['level'] = [125,175,225,775,825,875]
+            variables_to_extract['.pgrb2b.0p25.f000']['w, u, v, q, t, gh']['typeOfLevel'] = 'isobaricInhPa'
+            variables_to_extract['.pgrb2b.0p25.f000']['w, u, v, q, t, gh']['level'] = [125,175,225,775,825,875]
 
         # Create an empty list to store the extracted datasets
         mergeDSs = []
