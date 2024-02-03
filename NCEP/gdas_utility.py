@@ -25,63 +25,6 @@ import pygrib
 import requests
 from bs4 import BeautifulSoup
 
-def get_dataarray(grbfile, var_name, level_type, desired_level):
-
-    # Find the matching grib message
-    variable_message = grbfile.select(shortName=var_name, typeOfLevel=level_type, level=desired_level)
-
-    # create a netcdf dataset using the matching grib message
-    lats, lons = variable_message[0].latlons()
-    lats = lats[:,0]
-    lons = lons[0,:]
-
-    #check latitude range
-    reverse_lat = False
-    if lats[0] > 0:
-        reverse_lat = True
-        lats = lats[::-1]
-
-    steps = variable_message[0].validDate
-
-    #precipitation rate has two stepType ('instant', 'avg'), use 'instant')
-    if len(variable_message) > 2:
-        data = []
-        for message in variable_message:
-            data.append(message.values)
-        data = np.array(data)
-        if reverse_lat:
-            data = data[:, ::-1, :]
-    else:
-        data = variable_message[0].values
-        if reverse_lat:
-            data = data[::-1, :]
-
-    if len(data.shape) == 2:
-        da = xr.Dataset(
-            data_vars={
-                var_name: (['lat', 'lon'], data.astype('float32'))
-            },
-            coords={
-                'lon': lons.astype('float32'),
-                'lat': lats.astype('float32'),
-                'time': steps,  
-            }
-        )
-    elif len(data.shape) == 3:
-        da = xr.Dataset(
-            data_vars={
-                var_name: (['level', 'lat', 'lon'], data.astype('float32'))
-            },
-            coords={
-                'lon': lons.astype('float32'),
-                'lat': lats.astype('float32'),
-                'level': np.array(desired_level).astype('int32'),
-                'time': steps,  
-            }
-        )
-
-    return da
-
 
 class GFSDataProcessor:
     def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, download_source='nomads', output_directory=None, download_directory=None, keep_downloaded_data=True):
@@ -536,6 +479,64 @@ class GFSDataProcessor:
             print("Downloaded data removed.")
         except Exception as e:
             print(f"Error removing downloaded data: {str(e)}")
+
+    def get_dataarray(self, grbfile, var_name, level_type, desired_level):
+
+        # Find the matching grib message
+        variable_message = grbfile.select(shortName=var_name, typeOfLevel=level_type, level=desired_level)
+    
+        # create a netcdf dataset using the matching grib message
+        lats, lons = variable_message[0].latlons()
+        lats = lats[:,0]
+        lons = lons[0,:]
+    
+        #check latitude range
+        reverse_lat = False
+        if lats[0] > 0:
+            reverse_lat = True
+            lats = lats[::-1]
+    
+        steps = variable_message[0].validDate
+    
+        #precipitation rate has two stepType ('instant', 'avg'), use 'instant')
+        if len(variable_message) > 2:
+            data = []
+            for message in variable_message:
+                data.append(message.values)
+            data = np.array(data)
+            if reverse_lat:
+                data = data[:, ::-1, :]
+        else:
+            data = variable_message[0].values
+            if reverse_lat:
+                data = data[::-1, :]
+    
+        if len(data.shape) == 2:
+            da = xr.Dataset(
+                data_vars={
+                    var_name: (['lat', 'lon'], data.astype('float32'))
+                },
+                coords={
+                    'lon': lons.astype('float32'),
+                    'lat': lats.astype('float32'),
+                    'time': steps,  
+                }
+            )
+        elif len(data.shape) == 3:
+            da = xr.Dataset(
+                data_vars={
+                    var_name: (['level', 'lat', 'lon'], data.astype('float32'))
+                },
+                coords={
+                    'lon': lons.astype('float32'),
+                    'lat': lats.astype('float32'),
+                    'level': np.array(desired_level).astype('int32'),
+                    'time': steps,  
+                }
+            )
+    
+        return da
+
 
 
 if __name__ == "__main__":
