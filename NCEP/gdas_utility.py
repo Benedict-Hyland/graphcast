@@ -521,13 +521,12 @@ class GFSDataProcessor:
         #final_dataset = ds.assign_coords(datetime=ds.time)
         ds.to_netcdf(output_netcdf)
         ds.close()
-
-        print("Processing completed.\n")
-        print(f"Saved output to {output_netcdf}")
         
         # Optionally, remove downloaded data
         if not self.keep_downloaded_data:
             self.remove_downloaded_data()
+
+        print(f"Process completed successfully, your inputs for GraphCast model generated at:\n {output_netcdf}")
             
     def remove_downloaded_data(self):
         # Remove downloaded data from the specified directory
