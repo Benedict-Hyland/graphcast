@@ -6,7 +6,7 @@
     History:
         01/26/2024: Linlin Cui (linlin.cui@noaa.gov), added function save_grib2 
 """
-
+import os
 from datetime import datetime, timedelta
 import cf_units
 import iris
@@ -77,7 +77,7 @@ def save_grib2(dates, filename, outdir):
     for date in datevectors:
         print(f"Processing for time {date.strftime('%Y-%m-%d %H:00:00')}")
         hrs = int((date - forecast_starttime).total_seconds() // 3600)
-        outfile = str(outdir / f'gcgfs.t{cycle:02d}z.f{hrs:03d}')
+        outfile = os.path.join(outdir, f'graphcastgfs.t{cycle:02d}z.pgrb2.0p25.f{hrs:03d}')
      
         print(outfile)
     
