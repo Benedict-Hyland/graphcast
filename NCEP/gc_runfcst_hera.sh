@@ -42,6 +42,9 @@ echo "6 hours earlier state: $prev_datetime"
 forecast_length=40
 echo "forecast length: $forecast_length"
 
+num_pressure_levels=13
+echo "number of pressure levels: $num_pressure_levels"
+
 # Activate Conda environment
 source /scratch1/NCEPDEV/nems/AIML/miniconda3/etc/profile.d/conda.sh
 conda activate mlwp
