@@ -43,7 +43,7 @@ num_pressure_level=13
 start_time=$(date +%s)
 echo "start uploading graphcast forecast to s3 bucket for: $curr_datetime"
 # Run another Python script
-python3 upload_to_s3bucket.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-"$num_pressure_level"_steps-2.nc -o forecast_date-"$curr_datetime"_res-0.25_levels-"$num_pressure_level"_steps-"$forecast_length".nc
+python3 upload_to_s3bucket.py -d "$curr_datetime" -l "$num_pressure_level"
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 
