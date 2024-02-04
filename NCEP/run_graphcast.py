@@ -34,7 +34,18 @@ from graphcast import rollout
 import utils
 
 class GraphCastModel:
-    def __init__(self):
+    def __init__(self, pretrained_model_path, gdas_data_path, output_dir=None, num_pressure_levels=13, forecast_length=40):
+        self.pretrained_model_path = pretrained_model_path
+        self.gdas_data_path = gdas_data_path
+        self.forecast_length = forecast_length
+        self.num_pressure_levels = num_pressure_levels
+        
+        if output_dir is None:
+            self.output_dir = os.path.join(os.getcwd(), f"forecasts_{str(self.num_pressure_levels)}_levels")  # Use current directory if not specified
+        else:
+            self.output_dir = os.path.join(output_dir, f"forecasts_{str(self.num_pressure_levels)}_levels")
+        os.makedirs(self.output_dir, exist_ok=True)
+        
         self.params = None
         self.state = {}
         self.model_config = None
@@ -48,28 +59,33 @@ class GraphCastModel:
         self.forcings = None
         self.s3_bucket_name = "noaa-nws-graphcastgfs-pds"
         self.dates = None
-        self.outdir = None
+        
 
-    def load_pretrained_model(self, pretrained_model_path):
+    def load_pretrained_model(self):
         """Load pre-trained GraphCast model."""
-        with open(pretrained_model_path, "rb") as f:
+        if self.num_pressure_levels==13:
+            model_weights_path = f"{self.pretrained_model_path}/params/GraphCast_operational - ERA5-HRES 1979-2021 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz"
+        else:
+            model_weights_path = f"{self.pretrained_model_path}/params/GraphCast - ERA5 1979-2017 - resolution 0.25 - pressure levels 37 - mesh 2to6 - precipitation input and output.npz"
+
+        with open(model_weights_path, "rb") as f:
             ckpt = checkpoint.load(f, graphcast.CheckPoint)
             self.params = ckpt.params
             self.state = {}
             self.model_config = ckpt.model_config
             self.task_config = ckpt.task_config
 
-    def load_gdas_data(self, gdas_data_path, forecast_length = 40):
+    def load_gdas_data(self):
         """Load GDAS data."""
         #with open(gdas_data_path, "rb") as f:
         #    self.current_batch = xarray.load_dataset(f).compute()
-        self.current_batch = xarray.load_dataset(gdas_data_path).compute()
+        self.current_batch = xarray.load_dataset(self.gdas_data_path).compute()
         self.dates =  pd.to_datetime(self.current_batch.datetime.values)
         
-        if (forecast_length + 2) > len(self.current_batch['time']):
+        if (self.forecast_length + 2) > len(self.current_batch['time']):
             print('Updating batch dataset to account for forecast length')
             
-            diff = int(forecast_length + 2 - len(self.current_batch['time']))
+            diff = int(self.forecast_length + 2 - len(self.current_batch['time']))
             ds = self.current_batch
 
             # time and datetime update
@@ -83,16 +99,20 @@ class GraphCastModel:
             self.current_batch = ds
             print('batch dataset updated')
             
-            
         
-    def extract_inputs_targets_forcings(self, forecast_length = 40):
+    def extract_inputs_targets_forcings(self):
         """Extract inputs, targets, and forcings from the loaded data."""
         self.inputs, self.targets, self.forcings = data_utils.extract_inputs_targets_forcings(
-            self.current_batch, target_lead_times=slice("6h", f"{forecast_length*6}h"), **dataclasses.asdict(self.task_config)
+            self.current_batch, target_lead_times=slice("6h", f"{self.forecast_length*6}h"), **dataclasses.asdict(self.task_config)
         )
 
-    def load_normalization_stats(self, diffs_stddev_path, mean_path, stddev_path):
+    def load_normalization_stats(self):
         """Load normalization stats."""
+        
+        diffs_stddev_path = f"{self.pretrained_model_path}/stats/diffs_stddev_by_level.nc"
+        mean_path = f"{self.pretrained_model_path}/stats/mean_by_level.nc"
+        stddev_path = f"{self.pretrained_model_path}/stats/stddev_by_level.nc"
+        
         with open(diffs_stddev_path, "rb") as f:
             self.diffs_stddev_by_level = xarray.load_dataset(f).compute()
         with open(mean_path, "rb") as f:
@@ -143,23 +163,26 @@ class GraphCastModel:
         self.model = self._drop_state(self._with_params(jax.jit(self._with_configs(run_forward.apply))))
     
  
-    def get_predictions(self, fname, forecast_length):
+    def get_predictions(self):
         """Run GraphCast and save forecasts to a NetCDF file."""
 
-        print (f"start running GraphCast for {forecast_length} steps --> {forecast_length*6} hours.")
+        print (f"start running GraphCast for {self.forecast_length} steps --> {self.forecast_length*6} hours.")
         self.load_model()
            
         # output = self.model(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
         forecasts = rollout.chunked_prediction(self.model, rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
-
+        filename = f"forecasts_levels-{self.num_pressure_levels}_steps-{self.forecast_length}.nc"
+        output_netcdf = os.path.join(self.output_dir, filename)
+        
         # save forecasts
-        # forecasts.to_netcdf(f"{fname}")
-        # print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {fname}")
+        forecasts.to_netcdf(output_netcdf)
+        print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {output_netcdf}")
 
-        # Save as grib2 format 
-        path = pathlib.Path(fname)
-        self.outdir = path.parent
+        self.save_grib2(forecasts)
 
+            
+    def save_grib2(self, forecasts):
+        
         # reverse along latitude so that field is norht=>south in grib format
         forecasts = forecasts.reindex(lat=list(reversed(forecasts.lat)))
 
@@ -176,11 +199,11 @@ class GraphCastModel:
         forecasts['geopotential'] = forecasts['geopotential'] / 9.80665
         forecasts['total_precipitation_6hr'] = forecasts['total_precipitation_6hr'] * 1000
 
-        new_fname = self.outdir / f"forecast_new.nc"
-        forecasts.to_netcdf(f"{new_fname}")
+        new_fname = os.path.join(self.output_dir, "forecast_to_grib2.nc")
+        forecasts.to_netcdf(new_fname)
 
         #extract time slab and save as grib2 format
-        utils.save_grib2(self.dates, new_fname, self.outdir)
+        utils.save_grib2(self.dates, new_fname, self.output_dir)
 
         #remove intermediate nc file
         if os.path.isfile(new_fname):
@@ -188,11 +211,11 @@ class GraphCastModel:
             os.remove(new_fname)
         
     
-    def upload_to_s3(self, input_file, output_file, keep_data=False):
+    def upload_to_s3(self, keep_data):
         s3 = boto3.client('s3')
-        num_levels = len(self.current_batch['level'])
+        
         # Extract date and time information from the input file name
-        input_file_name = os.path.basename(input_file)
+        input_file_name = os.path.basename(self.gdas_data_path)
         
         date_start = input_file_name.find("date-")
 
@@ -203,65 +226,55 @@ class GraphCastModel:
         
             time_start = date_start + 8  # Move to the character after the date
             time = input_file_name[time_start:time_start + 2]  # Extract 2 characters as the time
-    
 
-        # Define S3 key paths for input and output files
-        # input_s3_key = f'graphcastgfs.{date}/{time}/input/{input_file}'
-        # output_s3_key = f'graphcastgfs.{date}/{time}/forecast/{output_file}'
+        # Upload output files to S3
+        # Iterate over all files in the local directory and upload each one to S3
+        s3_prefix = f'graphcastgfs.{date}/{time}/forecasts_{self.num_pressure_levels}_levels'
+        
+        for root, dirs, files in os.walk(self.output_dir):
+            for file in files:
+                local_path = os.path.join(root, file)
+                relative_path = os.path.relpath(local_path, local_directory)
+                s3_path = os.path.join(s3_prefix, relative_path)
+                
+                # Upload the file
+                s3.upload_file(local_path, self.s3_bucket_name, s3_path)
 
-        # Upload input file to S3
-        # s3.upload_file(input_file, self.s3_bucket_name, input_s3_key)
-
-        # Upload output nc file to S3
-        # s3.upload_file(output_file, self.s3_bucket_name, output_s3_key)
+        print("Upload to s3 bucket completed.")
 
         # Delete local files if keep_data is False
         if not keep_data:
-            os.remove(input_file)
-            os.remove(output_file)
-            print("Local input and output files deleted.")
-
-        # Upload output grib2 file to S3
-        if self.outdir is None:
-            path = pathlib.Path(output_file)
-            self.outdir = path.parent
-
-        output_files = glob.glob(f'{str(self.outdir)}/gcgfs*')
-        output_files.sort()
-    
-        for output_file in output_files:
-            print(f'Uploading file {output_file} to s3 bucket')
-            output_file_name = os.path.basename(output_file)
-            output_s3_key = f'graphcastgfs.{date}/{time}/forecast_levels_{num_levels}/{output_file_name}'
-            s3.upload_file(output_file, self.s3_bucket_name, output_s3_key)
-            
-            if not keep_data:
-                os.remove(output_file)
+            # Remove forecasts data from the specified directory
+            print("Removing downloaded grib2 data...")
+            try:
+                os.system(f"rm -rf {self.output_dir}")
+                print("Downloaded data removed.")
+            except Exception as e:
+                print(f"Error removing downloaded data: {str(e)}")
+                print("Local input and output files deleted.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run GraphCast model.")
     parser.add_argument("-i", "--input", help="input file path (including file name)", required=True)
-    parser.add_argument("-o", "--output", help="output netcdf file path (including file name)", required=True)
     parser.add_argument("-w", "--weights", help="parent directory of the graphcast params and stats", required=True)
     parser.add_argument("-l", "--length", help="length of forecast (6-hourly), an integer number in range [1, 40]", required=True)
+    parser.add_argument("-o", "--output", help="output netcdf file path", default=None)
+    parser.add_argument("-p", "--pressure", help="number of pressure levels", default=13)
     parser.add_argument("-u", "--upload", help="upload input data as well as forecasts to noaa s3 bucket (yes or no)", default = "no")
     parser.add_argument("-k", "--keep", help="keep input and output after uploading to noaa s3 bucket (yes or no)", default = "no")
     
     args = parser.parse_args()
-
-    runner = GraphCastModel()
-    runner.load_pretrained_model(f"{args.weights}/params/GraphCast_operational - ERA5-HRES 1979-2021 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz")
-    runner.load_gdas_data(args.input, int(args.length))
-    runner.extract_inputs_targets_forcings(int(args.length))
-    runner.load_normalization_stats(
-        f"{args.weights}/stats/diffs_stddev_by_level.nc", 
-        f"{args.weights}/stats/mean_by_level.nc", 
-        f"{args.weights}/stats/stddev_by_level.nc"
-    )
-    runner.get_predictions(args.output, int(args.length))
+    runner = GraphCastModel(args.weights, args.input, args.output, int(args.pressure), int(args.length))
+    
+    runner.load_pretrained_model()
+    runner.load_gdas_data()
+    runner.extract_inputs_targets_forcings()
+    runner.load_normalization_stats()
+    runner.get_predictions()
+    
     upload_data = args.upload.lower() == "yes"
     keep_data = args.keep.lower() == "yes"
-
+    
     if upload_data:
-        runner.upload_to_s3(args.input, args.output, keep_data)
+        runner.upload_to_s3(keep_data)
