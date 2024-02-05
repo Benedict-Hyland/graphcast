@@ -3,8 +3,8 @@
 #SBATCH --cpus-per-task=30  # Use all available CPU cores
 #SBATCH --time=4:00:00  # Adjust this to your estimated run time
 #SBATCH --job-name=graphcast
-#SBATCH --output=gc_output.txt
-#SBATCH --error=gc_error.txt
+#SBATCH --output=gc_37pl_output.txt
+#SBATCH --error=gc_37pl_error.txt
 #SBATCH --partition=compute
 
 # load module lib
