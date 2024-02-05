@@ -18,6 +18,8 @@ module list
 
 # Get the UTC hour and calculate the time in the format yyyymmddhh
 current_hour=$(date -u +%H)
+current_hour=$((10#$current_hour))
+
 if (( $current_hour >= 0 && $current_hour < 6 )); then
     datetime=$(date -u -d 'today 00:00')
 elif (( $current_hour >= 6 && $current_hour < 12 )); then
