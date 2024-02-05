@@ -31,7 +31,7 @@ from graphcast import graphcast
 from graphcast import normalization
 from graphcast import rollout
 
-import utils
+from utils import nc2grib
 
 class GraphCastModel:
     def __init__(self, pretrained_model_path, gdas_data_path, output_dir=None, num_pressure_levels=13, forecast_length=40):
@@ -175,40 +175,16 @@ class GraphCastModel:
         output_netcdf = os.path.join(self.output_dir, filename)
         
         # save forecasts
-        forecasts.to_netcdf(output_netcdf)
-        print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {output_netcdf}")
+        # forecasts.to_netcdf(output_netcdf)
+        # print (f"GraphCast run completed successfully, you can find the GraphCast forecasts in the following directory:\n {output_netcdf}")
 
         self.save_grib2(forecasts)
 
             
     def save_grib2(self, forecasts):
         
-        # reverse along latitude so that field is norht=>south in grib format
-        forecasts = forecasts.reindex(lat=list(reversed(forecasts.lat)))
-
-        # drop "batch" from variables
-        for var in forecasts.variables:
-            if 'batch' in forecasts[var].dims:
-                forecasts[var] = forecasts[var].squeeze(dim='batch')
-
-        # update units
-        forecasts['level'] = forecasts['level'] * 100
-        forecasts['level'].attrs['long_name'] = 'pressure'
-        forecasts['level'].attrs['units'] = 'Pa'
-
-        forecasts['geopotential'] = forecasts['geopotential'] / 9.80665
-        forecasts['total_precipitation_6hr'] = forecasts['total_precipitation_6hr'] * 1000
-
-        new_fname = os.path.join(self.output_dir, "forecast_to_grib2.nc")
-        forecasts.to_netcdf(new_fname)
-
-        #extract time slab and save as grib2 format
-        utils.save_grib2(self.dates, new_fname, self.output_dir)
-
-        #remove intermediate nc file
-        if os.path.isfile(new_fname):
-            print(f'Deleting intermediate nc file {new_fname}: ')
-            os.remove(new_fname)
+        # Call the save as grib2 function
+        nc2grib.save_grib2(self.dates, forecasts, self.output_dir)
         
     
     def upload_to_s3(self, keep_data):
@@ -234,7 +210,7 @@ class GraphCastModel:
         for root, dirs, files in os.walk(self.output_dir):
             for file in files:
                 local_path = os.path.join(root, file)
-                relative_path = os.path.relpath(local_path, local_directory)
+                relative_path = os.path.relpath(local_path, self.output_dir)
                 s3_path = os.path.join(s3_prefix, relative_path)
                 
                 # Upload the file
@@ -244,14 +220,15 @@ class GraphCastModel:
 
         # Delete local files if keep_data is False
         if not keep_data:
-            # Remove forecasts data from the specified directory
-            print("Removing downloaded grib2 data...")
+            # Remove forecast data from the specified directory
+            print("Removing input and forecast data from the specified directory...")
             try:
                 os.system(f"rm -rf {self.output_dir}")
-                print("Downloaded data removed.")
-            except Exception as e:
-                print(f"Error removing downloaded data: {str(e)}")
+                os.remove(self.gdas_data_path)
                 print("Local input and output files deleted.")
+            except Exception as e:
+                print(f"Error removing input and forecast data: {str(e)}")
+
 
 
 if __name__ == "__main__":
