@@ -31,7 +31,7 @@ from graphcast import graphcast
 from graphcast import normalization
 from graphcast import rollout
 
-from utils import nc2grib
+from utils.nc2grib import Netcdf2Grib
 
 class GraphCastModel:
     def __init__(self, pretrained_model_path, gdas_data_path, output_dir=None, num_pressure_levels=13, forecast_length=40):
@@ -182,9 +182,10 @@ class GraphCastModel:
 
             
     def save_grib2(self, forecasts):
-        
-        # Call the save as grib2 function
-        nc2grib.save_grib2(self.dates, forecasts, self.output_dir)
+
+        # Call and save forecasts in grib2
+        converter = Netcdf2Grib()
+        converter.save_grib2(self.dates, forecasts, self.output_dir)
         
     
     def upload_to_s3(self, keep_data):
