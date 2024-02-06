@@ -204,6 +204,13 @@ class GraphCastModel:
             time_start = date_start + 8  # Move to the character after the date
             time = input_file_name[time_start:time_start + 2]  # Extract 2 characters as the time
 
+
+        # Define S3 key paths for input and output files
+        input_s3_key = f'graphcastgfs.{date}/{time}/input/{self.gdas_data_path}'
+
+        # Upload input file to S3
+        s3.upload_file(self.gdas_data_path, self.s3_bucket_name, input_s3_key)
+        
         # Upload output files to S3
         # Iterate over all files in the local directory and upload each one to S3
         s3_prefix = f'graphcastgfs.{date}/{time}/forecasts_{self.num_pressure_levels}_levels'
