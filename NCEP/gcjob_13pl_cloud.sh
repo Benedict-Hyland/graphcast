@@ -1,14 +1,14 @@
-#!/bin/bash
+#!/bin/bash --login
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=30  # Use all available CPU cores
 #SBATCH --time=4:00:00  # Adjust this to your estimated run time
 #SBATCH --job-name=graphcast
-#SBATCH --output=gc_output.txt
-#SBATCH --error=gc_error.txt
+#SBATCH --output=gc_13pl_output.txt
+#SBATCH --error=gc_13pl_error.txt
 #SBATCH --partition=compute
 
 # load module lib
-source /etc/profile.d/modules.sh
+# source /etc/profile.d/modules.sh
 
 # load necessary modules
 module use /contrib/spack-stack/envs/ufswm/install/modulefiles/Core/
@@ -18,6 +18,8 @@ module list
 
 # Get the UTC hour and calculate the time in the format yyyymmddhh
 current_hour=$(date -u +%H)
+current_hour=$((10#$current_hour))
+
 if (( $current_hour >= 0 && $current_hour < 6 )); then
     datetime=$(date -u -d 'today 00:00')
 elif (( $current_hour >= 6 && $current_hour < 12 )); then
@@ -39,6 +41,9 @@ echo "6 hours earlier state: $prev_datetime"
 forecast_length=40
 echo "forecast length: $forecast_length"
 
+num_pressure_levels=13
+echo "number of pressure levels: $num_pressure_levels"
+
 # Set Miniconda path
 #export PATH="/contrib/Sadegh.Tabas/miniconda3/bin:$PATH"
 
@@ -52,7 +57,7 @@ cd /contrib/Sadegh.Tabas/operational/graphcast/NCEP/
 start_time=$(date +%s)
 echo "start runing gdas utility to generate graphcast inputs for: $curr_datetime"
 # Run the Python script gdas.py with the calculated times
-python3 gdas_utility.py "$prev_datetime" "$curr_datetime"
+python3 gdas_utility.py "$prev_datetime" "$curr_datetime" -l "$num_pressure_levels"
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 
@@ -63,7 +68,7 @@ echo "Execution time for gdas_utility.py: $execution_time seconds"
 start_time=$(date +%s)
 echo "start runing graphcast to get real time 10-days forecasts for: $curr_datetime"
 # Run another Python script
-python3 run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-13_steps-2.nc -o forecast_date-"$curr_datetime"_res-0.25_levels-13_steps-"$forecast_length".nc -w /contrib/graphcast/NCEP -l "$forecast_length" -u yes -k no
+python3 run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-"$num_pressure_levels"_steps-2.nc -w /contrib/graphcast/NCEP -l "$forecast_length" -p "$num_pressure_levels" -u yes -k no
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 

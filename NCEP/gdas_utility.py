@@ -6,6 +6,7 @@ Revision history:
     -20231204: Sadegh Tabas, calculating toa incident solar radiation, parallelizing, updating units, and resolving memory issues
     -20240112: Sadegh Tabas, (i)removing Pysolar as tisr would be calc through GC, (ii) add NOMADS option for downloading data, (iii) add 37 pressure levels, (iv) configurations for hera
     -20240124: Linlin Cui, added pygrib method to extract variables from grib2 files
+    -20240205: Sadegh Tabas, add 37 pressure levels, update s3 bucket
 '''
 import os
 import sys
@@ -14,7 +15,7 @@ import glob
 import argparse
 import subprocess
 from datetime import datetime, timedelta
-
+import re
 import boto3
 import xarray as xr
 import numpy as np
@@ -23,63 +24,6 @@ from botocore import UNSIGNED
 import pygrib
 import requests
 from bs4 import BeautifulSoup
-
-def get_dataarray(grbfile, var_name, level_type, desired_level):
-
-    # Find the matching grib message
-    variable_message = grbfile.select(shortName=var_name, typeOfLevel=level_type, level=desired_level)
-
-    # create a netcdf dataset using the matching grib message
-    lats, lons = variable_message[0].latlons()
-    lats = lats[:,0]
-    lons = lons[0,:]
-
-    #check latitude range
-    reverse_lat = False
-    if lats[0] > 0:
-        reverse_lat = True
-        lats = lats[::-1]
-
-    steps = variable_message[0].validDate
-
-    #precipitation rate has two stepType ('instant', 'avg'), use 'instant')
-    if len(variable_message) > 2:
-        data = []
-        for message in variable_message:
-            data.append(message.values)
-        data = np.array(data)
-        if reverse_lat:
-            data = data[:, ::-1, :]
-    else:
-        data = variable_message[0].values
-        if reverse_lat:
-            data = data[::-1, :]
-
-    if len(data.shape) == 2:
-        da = xr.Dataset(
-            data_vars={
-                var_name: (['lat', 'lon'], data.astype('float32'))
-            },
-            coords={
-                'lon': lons.astype('float32'),
-                'lat': lats.astype('float32'),
-                'time': steps,  
-            }
-        )
-    elif len(data.shape) == 3:
-        da = xr.Dataset(
-            data_vars={
-                var_name: (['level', 'lat', 'lon'], data.astype('float32'))
-            },
-            coords={
-                'lon': lons.astype('float32'),
-                'lat': lats.astype('float32'),
-                'level': np.array(desired_level).astype('int32'),
-                'time': steps,  
-            }
-        )
-
-    return da
 
 
 class GFSDataProcessor:
@@ -94,25 +38,38 @@ class GFSDataProcessor:
 
         if self.download_source == 's3':
             # Initialize the S3 client
-            self.s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
+            # Specify the path to your custom AWS credentials file
+            custom_credentials_file = '/contrib/Sadegh.Tabas/.aws/credentials'
+            
+            # Specify the path to your custom AWS config file
+            custom_config_file = '/contrib/Sadegh.Tabas/.aws/config'
+
+            # Set the environment variables
+            os.environ['AWS_SHARED_CREDENTIALS_FILE']=custom_credentials_file
+            os.environ['AWS_CONFIG_FILE']=custom_config_file
+
+            self.s3 = boto3.client('s3')
     
             # Specify the S3 bucket name and root directory
-            self.bucket_name = 'noaa-gfs-bdp-pds'
+            self.bucket_name = 'noaa-ncepdev-none-ca-ufs-cpldcld'
         
         self.root_directory = 'gdas'
 
         # Specify the local directory where you want to save the files
         if self.download_directory is None:
-            self.local_base_directory = os.path.join(os.getcwd(), 'noaa-gfs-bdp-pds-data')  # Use current directory if not specified
+            self.local_base_directory = os.path.join(os.getcwd(), self.bucket_name+'_'+str(self.num_levels))  # Use current directory if not specified
         else:
-            self.local_base_directory = os.path.join(self.download_directory, 'noaa-gfs-bdp-pds-data')
+            self.local_base_directory = os.path.join(self.download_directory, self.bucket_name+'_'+str(self.num_levels))
 
         # List of file formats to download
-        self.file_formats = ['0p25.f000', '0p25.f006'] # , '0p25.f001'
+        if self.num_levels == 13:     
+            self.file_formats = ['pgrb2.0p25.f000', 'pgrb2.0p25.f006'] # , '0p25.f001'
+        else:
+            self.file_formats = ['pgrb2.0p25.f000', 'pgrb2b.0p25.f000', 'pgrb2.0p25.f006'] # , '0p25.f001'
     
     def s3bucket(self, date_str, time_str, local_directory):
         # Construct the S3 prefix for the directory
-        s3_prefix = f"{self.root_directory}.{date_str}/{time_str}/"
+        s3_prefix = f"Sadegh.Tabas/gdas_wcoss2/{self.root_directory}.{date_str}/{time_str}/"
         # List objects in the S3 directory
         s3_objects = self.s3.list_objects_v2(Bucket=self.bucket_name, Prefix=s3_prefix)
 
@@ -195,7 +152,7 @@ class GFSDataProcessor:
 
         # Create a dictionary to specify the variables, levels, and whether to extract only the first time step (if needed)
         variables_to_extract = {
-            '.f000': {
+            '.pgrb2.0p25.f000': {
                 ':HGT:': {
                     'levels': [':surface:'],
                     'first_time_step_only': True,  # Extract only the first time step
@@ -213,7 +170,7 @@ class GFSDataProcessor:
                     'levels': [':(50|100|150|200|250|300|400|500|600|700|850|925|1000) mb:'],
                 },
             },
-            '.f006': {
+            '.pgrb2.0p25.f006': {
                 ':LAND:': {
                     'levels': [':surface:'],
                     'first_time_step_only': True,  # Extract only the first time step
@@ -224,8 +181,11 @@ class GFSDataProcessor:
             }
         }
         if self.num_levels == 37:
-            variables_to_extract['.f000'][':SPFH|VVEL|VGRD|UGRD|HGT|TMP:']['levels'] = [':(1|2|3|5|7|10|20|30|50|70|100|125|150|175|200|225|250|300|350|400|450|500|550|600|650|700|750|775|800|825|850|875|900|925|950|975|1000) mb:']
-
+            variables_to_extract['.pgrb2.0p25.f000'][':SPFH|VVEL|VGRD|UGRD|HGT|TMP:']['levels'] = [':(1|2|3|5|7|10|20|30|50|70|100|150|200|250|300|350|400|450|500|550|600|650|700|750|800|850|900|925|950|975|1000) mb:']
+            variables_to_extract['.pgrb2b.0p25.f000'] = {}
+            variables_to_extract['.pgrb2b.0p25.f000'][':SPFH|VVEL|VGRD|UGRD|HGT|TMP:'] = {}
+            variables_to_extract['.pgrb2b.0p25.f000'][':SPFH|VVEL|VGRD|UGRD|HGT|TMP:']['levels'] = [':(125|175|225|775|825|875) mb:']
+       
         # Create an empty list to store the extracted datasets
         extracted_datasets = []
         files = []
@@ -247,14 +207,24 @@ class GFSDataProcessor:
                             levels = data['levels']
                             first_time_step_only = data.get('first_time_step_only', False)  # Default to False if not specified
 
-                            grib2_file = os.path.join(subfolder_path, f'gdas.t{hour}z.pgrb2.0p25{file_extension}')
+                            grib2_file = os.path.join(subfolder_path, f'gdas.t{hour}z{file_extension}')
                     
                             # Extract the specified variables with levels from the GRIB2 file
                             for level in levels:
-                                output_file = f'{variable}_{level}_{date_folder}_{hour}{file_extension}.nc'
+                                output_file = f'{variable}_{level}_{date_folder}_{hour}{file_extension}_{self.num_levels}.nc'
                                 files.append(output_file)
+                                
+                                # Extracting levels using regular expression
+                                matches = re.findall(r'\d+', level)
+                                
+                                # Convert the extracted matches to integers
+                                curr_levels = [int(match) for match in matches]
+                                
+                                # Get the number of levels
+                                number_of_levels = len(curr_levels)
+                                
                                 # Use wgrib2 to extract the variable with level
-                                wgrib2_command = ['wgrib2', '-nc_nlev', f'{self.num_levels}', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
+                                wgrib2_command = ['wgrib2', '-nc_nlev', f'{number_of_levels}', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
                                 subprocess.run(wgrib2_command, check=True)
 
                                 # Open the extracted netcdf file as an xarray dataset
@@ -356,7 +326,7 @@ class GFSDataProcessor:
 
         #Get time-varying variables
         variables_to_extract = {
-            '.f000': {
+            '.pgrb2.0p25.f000': {
                 '2t': {
                     'typeOfLevel': 'heightAboveGround',
                     'level': 2,
@@ -374,7 +344,7 @@ class GFSDataProcessor:
                     'level': [50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 850, 925, 1000],
                 },
             },
-            '.f006': {
+            '.pgrb2.0p25.f006': {
                 'tp': {  # total precipitation 
                     'typeOfLevel': 'surface',
                     'level': 0,
@@ -383,12 +353,16 @@ class GFSDataProcessor:
         }
 
         if self.num_levels == 37:
-            variables_to_extract['.f000']['w, u, v, q, t, gh']['level'] = [
-                1, 2, 3, 5, 7, 10, 20, 30, 50, 70, 100, 
-                125, 150, 175, 200, 225, 250, 300, 350, 400,
-                450, 500, 550, 600, 650, 700, 750, 775, 800,
-                825, 850, 875, 900, 925, 950, 975, 1000,
+            variables_to_extract['.pgrb2.0p25.f000']['w, u, v, q, t, gh']['level'] = [
+                1, 2, 3, 5, 7, 10, 20, 30, 50, 70, 
+                100, 150, 200, 250, 300, 350, 400,
+                450, 500, 550, 600, 650, 700, 750,
+                800, 850, 900, 925, 950, 975, 1000,
             ]
+            variables_to_extract['.pgrb2b.0p25.f000'] = {}
+            variables_to_extract['.pgrb2b.0p25.f000']['w, u, v, q, t, gh'] = {}
+            variables_to_extract['.pgrb2b.0p25.f000']['w, u, v, q, t, gh']['typeOfLevel'] = 'isobaricInhPa'
+            variables_to_extract['.pgrb2b.0p25.f000']['w, u, v, q, t, gh']['level'] = [125,175,225,775,825,875]
 
         # Create an empty list to store the extracted datasets
         mergeDSs = []
@@ -408,7 +382,7 @@ class GFSDataProcessor:
                     mergeDAs = []
 
                     for file_extension, variables in variables_to_extract.items():
-                        fname = os.path.join(subfolder_path, f'gdas.t{hour}z.pgrb2.0p25{file_extension}')
+                        fname = os.path.join(subfolder_path, f'gdas.t{hour}z{file_extension}')
 
                         #open grib file
                         grbs = pygrib.open(fname)
@@ -490,10 +464,13 @@ class GFSDataProcessor:
         #final_dataset = ds.assign_coords(datetime=ds.time)
         ds.to_netcdf(output_netcdf)
         ds.close()
+        
+        # Optionally, remove downloaded data
+        if not self.keep_downloaded_data:
+            self.remove_downloaded_data()
 
-        print("Processing completed.\n")
-        print(f"Saved output to {output_netcdf}")
-
+        print(f"Process completed successfully, your inputs for GraphCast model generated at:\n {output_netcdf}")
+            
     def remove_downloaded_data(self):
         # Remove downloaded data from the specified directory
         print("Removing downloaded grib2 data...")
@@ -502,6 +479,64 @@ class GFSDataProcessor:
             print("Downloaded data removed.")
         except Exception as e:
             print(f"Error removing downloaded data: {str(e)}")
+
+    def get_dataarray(self, grbfile, var_name, level_type, desired_level):
+
+        # Find the matching grib message
+        variable_message = grbfile.select(shortName=var_name, typeOfLevel=level_type, level=desired_level)
+    
+        # create a netcdf dataset using the matching grib message
+        lats, lons = variable_message[0].latlons()
+        lats = lats[:,0]
+        lons = lons[0,:]
+    
+        #check latitude range
+        reverse_lat = False
+        if lats[0] > 0:
+            reverse_lat = True
+            lats = lats[::-1]
+    
+        steps = variable_message[0].validDate
+    
+        #precipitation rate has two stepType ('instant', 'avg'), use 'instant')
+        if len(variable_message) > 2:
+            data = []
+            for message in variable_message:
+                data.append(message.values)
+            data = np.array(data)
+            if reverse_lat:
+                data = data[:, ::-1, :]
+        else:
+            data = variable_message[0].values
+            if reverse_lat:
+                data = data[::-1, :]
+    
+        if len(data.shape) == 2:
+            da = xr.Dataset(
+                data_vars={
+                    var_name: (['lat', 'lon'], data.astype('float32'))
+                },
+                coords={
+                    'lon': lons.astype('float32'),
+                    'lat': lats.astype('float32'),
+                    'time': steps,  
+                }
+            )
+        elif len(data.shape) == 3:
+            da = xr.Dataset(
+                data_vars={
+                    var_name: (['level', 'lat', 'lon'], data.astype('float32'))
+                },
+                coords={
+                    'lon': lons.astype('float32'),
+                    'lat': lats.astype('float32'),
+                    'level': np.array(desired_level).astype('int32'),
+                    'time': steps,  
+                }
+            )
+    
+        return da
+
 
 
 if __name__ == "__main__":

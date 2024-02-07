@@ -42,6 +42,9 @@ echo "6 hours earlier state: $prev_datetime"
 forecast_length=40
 echo "forecast length: $forecast_length"
 
+num_pressure_levels=13
+echo "number of pressure levels: $num_pressure_levels"
+
 # Activate Conda environment
 source /scratch1/NCEPDEV/nems/AIML/miniconda3/etc/profile.d/conda.sh
 conda activate mlwp
@@ -51,7 +54,7 @@ cd /scratch1/NCEPDEV/nems/AIML/graphcast/NCEP/
 start_time=$(date +%s)
 echo "start runing graphcast to get real time 10-days forecasts for: $curr_datetime"
 # Run another Python script
-python3 run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-13_steps-2.nc -o forecast_date-"$curr_datetime"_res-0.25_levels-13_steps-"$forecast_length".nc -w /scratch1/NCEPDEV/nems/AIML/gc_weights -l "$forecast_length" -u no -k yes
+python3 run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-"$num_pressure_levels"_steps-2.nc -w /scratch1/NCEPDEV/nems/AIML/gc_weights -l "$forecast_length" -p "$num_pressure_levels"
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 
