@@ -35,11 +35,11 @@ The model output fields are:
 
   * mean sea-level pressure
 
-  *6-hourly total precipitation
+  * 6-hourly total precipitation
 
 The near real-time forecast outputs along with inputs are available on `AWS <https://noaa-nws-graphcastgfs-pds.s3.amazonaws.com/index.html>`_. 
 
-For each cycle, the dataset contains input files to feed into GraphCast found in the directory 
+For each cycle, the dataset contains input files to feed into GraphCast found in the directory:
 
   graphcastgfs.yyyymmdd/hh/input 
 
