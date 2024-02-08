@@ -1,4 +1,4 @@
-GraphCast Global Forecast System (GraphCastGFS)
+GraphCast with GFS input
 =======================================================
 .. toctree::
    :numbered:
