@@ -39,7 +39,10 @@ The model output fields are:
 
 The near real-time forecast outputs along with inputs are available on `AWS <https://noaa-nws-graphcastgfs-pds.s3.amazonaws.com/index.html>`_. 
 
-For each cycle, the dataset contains input files to feed into GraphCast found in the directory graphcastgfs.yyyymmdd/hh/input 
+For each cycle, the dataset contains input files to feed into GraphCast found in the directory 
+
+  graphcastgfs.yyyymmdd/hh/input 
+
 and 10-day forecast results for the current cycle found in the following directories:
 
   graphcastgfs.yyyymmdd/hh/forecasts_13_levels
