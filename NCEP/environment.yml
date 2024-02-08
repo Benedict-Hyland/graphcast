@@ -12,8 +12,6 @@ dependencies:
   - iris
   - iris-grib
   - jupyterlab
-
   - pip
   - pip:
-    - ecmwflibs
     - https://github.com/deepmind/graphcast/archive/master.zip
