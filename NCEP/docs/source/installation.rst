@@ -10,3 +10,7 @@ With conda, you can create an environment and install required libraries with th
 Activate the environment::
 
     conda activate your-env-name
+
+Get EMC/graphcast source code::
+
+    git clone https://github.com/NOAA-EMC/graphcast.git
