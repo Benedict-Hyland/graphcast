@@ -1,0 +1,17 @@
+name: graphcast
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10
+  - dm-tree
+  - netcdf4
+  - xarray
+  - cartopy
+  - pygrib
+  - eccodes
+  - iris
+  - iris-grib
+  - jupyterlab
+  - pip
+  - pip:
+    - https://github.com/deepmind/graphcast/archive/master.zip
