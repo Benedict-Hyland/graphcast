@@ -22,7 +22,7 @@ Once you have input netCDF file, model weights, and statistics data, you can run
 
   Optional:
 
-    *-p* or *--pressure*: 13 or 37, number of pressure levels
+    *-p* or *--pressure*: 13 or 37, number of pressure levels (default: 37)
 
     *-u* or *--upload*: yes or no, upload input and output files to NOAA s3 bucket (default: no)
 
