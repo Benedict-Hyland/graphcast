@@ -7,6 +7,7 @@ Revision history:
     -20240112: Sadegh Tabas, (i)removing Pysolar as tisr would be calc through GC, (ii) add NOMADS option for downloading data, (iii) add 37 pressure levels, (iv) configurations for hera
     -20240124: Linlin Cui, added pygrib method to extract variables from grib2 files
     -20240205: Sadegh Tabas, add 37 pressure levels, update s3 bucket
+    -20240214: Linlin Cui, update pygrib method to account for 37 pressure levels
 '''
 import os
 import sys
@@ -27,7 +28,7 @@ from bs4 import BeautifulSoup
 
 
 class GFSDataProcessor:
-    def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, download_source='nomads', output_directory=None, download_directory=None, keep_downloaded_data=True):
+    def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, download_source='nomads', output_directory=None, download_directory=None, keep_downloaded_data=True, aws=None):
         self.start_datetime = start_datetime
         self.end_datetime = end_datetime
         self.num_levels = num_pressure_levels
@@ -37,21 +38,10 @@ class GFSDataProcessor:
         self.keep_downloaded_data = keep_downloaded_data
 
         if self.download_source == 's3':
-            # Initialize the S3 client
-            # Specify the path to your custom AWS credentials file
-            custom_credentials_file = '/contrib/Sadegh.Tabas/.aws/credentials'
-            
-            # Specify the path to your custom AWS config file
-            custom_config_file = '/contrib/Sadegh.Tabas/.aws/config'
-
-            # Set the environment variables
-            os.environ['AWS_SHARED_CREDENTIALS_FILE']=custom_credentials_file
-            os.environ['AWS_CONFIG_FILE']=custom_config_file
-
             self.s3 = boto3.client('s3')
     
-            # Specify the S3 bucket name and root directory
-            self.bucket_name = 'noaa-ncepdev-none-ca-ufs-cpldcld'
+        # Specify the S3 bucket name and root directory
+        self.bucket_name = 'noaa-ncepdev-none-ca-ufs-cpldcld'
         
         self.root_directory = 'gdas'
 
@@ -359,10 +349,8 @@ class GFSDataProcessor:
                 450, 500, 550, 600, 650, 700, 750,
                 800, 850, 900, 925, 950, 975, 1000,
             ]
-            variables_to_extract['.pgrb2b.0p25.f000'] = {}
-            variables_to_extract['.pgrb2b.0p25.f000']['w, u, v, q, t, gh'] = {}
-            variables_to_extract['.pgrb2b.0p25.f000']['w, u, v, q, t, gh']['typeOfLevel'] = 'isobaricInhPa'
-            variables_to_extract['.pgrb2b.0p25.f000']['w, u, v, q, t, gh']['level'] = [125,175,225,775,825,875]
+            extra_levels = [125, 175, 225, 775, 825, 875]
+            file_extension_2b = '.pgrb2b.0p25.f000'
 
         # Create an empty list to store the extracted datasets
         mergeDSs = []
@@ -396,8 +384,18 @@ class GFSDataProcessor:
                             for var_name in variable_names:
 
                                 print(f'Get variable {var_name} from file {fname}:')
-                                mergeDAs.append(get_dataarray(grbs, var_name, levelType, desired_level))
-        
+                                da = self.get_dataarray(grbs, var_name, levelType, desired_level)
+
+                                #extract variables from pgrb2b
+                                if (levelType == 'isobaricInhPa') & (self.num_levels == 37):
+                                    fname2b = os.path.join(subfolder_path, f'gdas.t{hour}z{file_extension_2b}')
+                                    grbs2b = pygrib.open(fname2b)
+                                    da_extra = self.get_dataarray(grbs2b, var_name, levelType, extra_levels)
+                                    da_combined = da.combine_first(da_extra) 
+                                    mergeDAs.append(da_combined)
+                                else:
+                                    mergeDAs.append(da)
+
                     ds = xr.merge(mergeDAs)
 
                     mergeDSs.append(ds)
@@ -414,7 +412,7 @@ class GFSDataProcessor:
         levelType = 'surface'
         desired_level = 0
         for var_name in ['lsm', 'orog']:
-            da = get_dataarray(grbs, var_name, levelType, desired_level)
+            da = self.get_dataarray(grbs, var_name, levelType, desired_level)
             ds = xr.merge([ds, da])
 
         ds = ds.rename({
@@ -560,6 +558,13 @@ if __name__ == "__main__":
     output_directory = args.output
     download_directory = args.download
     keep_downloaded_data = args.keep.lower() == "yes"
+
+    # check environment variables
+    if (download_source == 's3') & (os.environ.get('AWS_SHARED_CREDENTIALS_FILE') is None) | (os.environ.get('AWS_CONFIG_FILE') is None):
+        if os.environ.get('AWS_SHARED_CREDENTIALS_FILE') is None:
+            raise ValueError('Please set up environment varialbes AWS_SHARED_CREDENTIALS_FILE')
+        if os.environ.get('AWS_CONFIG_FILE') is None:
+            raise ValueError('Please set up environment varialbes AWS_CONFIG_FILE')
 
     data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, download_source, output_directory, download_directory, keep_downloaded_data)
     data_processor.download_data()
