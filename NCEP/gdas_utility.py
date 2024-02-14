@@ -27,7 +27,7 @@ from bs4 import BeautifulSoup
 
 
 class GFSDataProcessor:
-    def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, download_source='nomads', output_directory=None, download_directory=None, keep_downloaded_data=True):
+    def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, download_source='nomads', output_directory=None, download_directory=None, keep_downloaded_data=True, aws=None):
         self.start_datetime = start_datetime
         self.end_datetime = end_datetime
         self.num_levels = num_pressure_levels
@@ -39,14 +39,19 @@ class GFSDataProcessor:
         if self.download_source == 's3':
             # Initialize the S3 client
             # Specify the path to your custom AWS credentials file
-            custom_credentials_file = '/contrib/Sadegh.Tabas/.aws/credentials'
+            #custom_credentials_file = '/contrib/Sadegh.Tabas/.aws/credentials'
             
             # Specify the path to your custom AWS config file
-            custom_config_file = '/contrib/Sadegh.Tabas/.aws/config'
+            #custom_config_file = '/contrib/Sadegh.Tabas/.aws/config'
 
             # Set the environment variables
-            os.environ['AWS_SHARED_CREDENTIALS_FILE']=custom_credentials_file
-            os.environ['AWS_CONFIG_FILE']=custom_config_file
+            if os.environ.get('AWS_SHARED_CREDENTIALS_FILE') is None:
+                custom_credentials_file = os.path.join(aws, 'credentials')
+                os.environ['AWS_SHARED_CREDENTIALS_FILE']=custom_credentials_file
+
+            if os.environ.get('AWS_CONFIG_FILE') is None:
+                custom_config_file = os.path.join(aws, 'config')
+                os.environ['AWS_CONFIG_FILE']=custom_config_file
 
             self.s3 = boto3.client('s3')
     
@@ -396,7 +401,7 @@ class GFSDataProcessor:
                             for var_name in variable_names:
 
                                 print(f'Get variable {var_name} from file {fname}:')
-                                mergeDAs.append(get_dataarray(grbs, var_name, levelType, desired_level))
+                                mergeDAs.append(self.get_dataarray(grbs, var_name, levelType, desired_level))
         
                     ds = xr.merge(mergeDAs)
 
@@ -414,7 +419,7 @@ class GFSDataProcessor:
         levelType = 'surface'
         desired_level = 0
         for var_name in ['lsm', 'orog']:
-            da = get_dataarray(grbs, var_name, levelType, desired_level)
+            da = self.get_dataarray(grbs, var_name, levelType, desired_level)
             ds = xr.merge([ds, da])
 
         ds = ds.rename({
@@ -549,6 +554,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", help="Output directory for processed data")
     parser.add_argument("-d", "--download", help="Download directory for raw data")
     parser.add_argument("-k", "--keep", help="Keep downloaded data (yes or no)", default="no")
+    parser.add_argument("-c", "--credential", help="Path to where aws credential and config files are saved")
 
     args = parser.parse_args()
 
@@ -560,8 +566,9 @@ if __name__ == "__main__":
     output_directory = args.output
     download_directory = args.download
     keep_downloaded_data = args.keep.lower() == "yes"
+    aws = args.credential
 
-    data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, download_source, output_directory, download_directory, keep_downloaded_data)
+    data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, download_source, output_directory, download_directory, keep_downloaded_data, aws)
     data_processor.download_data()
     
     if method == "wgrib2":
