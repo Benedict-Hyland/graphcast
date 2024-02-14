@@ -50,8 +50,8 @@ class GFSDataProcessor:
 
             self.s3 = boto3.client('s3')
     
-            # Specify the S3 bucket name and root directory
-            self.bucket_name = 'noaa-ncepdev-none-ca-ufs-cpldcld'
+        # Specify the S3 bucket name and root directory
+        self.bucket_name = 'noaa-ncepdev-none-ca-ufs-cpldcld'
         
         self.root_directory = 'gdas'
 
