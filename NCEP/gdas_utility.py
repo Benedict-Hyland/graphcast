@@ -7,6 +7,7 @@ Revision history:
     -20240112: Sadegh Tabas, (i)removing Pysolar as tisr would be calc through GC, (ii) add NOMADS option for downloading data, (iii) add 37 pressure levels, (iv) configurations for hera
     -20240124: Linlin Cui, added pygrib method to extract variables from grib2 files
     -20240205: Sadegh Tabas, add 37 pressure levels, update s3 bucket
+    -20240214: Linlin Cui, update pygrib method to account for 37 pressure levels
 '''
 import os
 import sys
@@ -37,22 +38,6 @@ class GFSDataProcessor:
         self.keep_downloaded_data = keep_downloaded_data
 
         if self.download_source == 's3':
-            # Initialize the S3 client
-            # Specify the path to your custom AWS credentials file
-            #custom_credentials_file = '/contrib/Sadegh.Tabas/.aws/credentials'
-            
-            # Specify the path to your custom AWS config file
-            #custom_config_file = '/contrib/Sadegh.Tabas/.aws/config'
-
-            # Set the environment variables
-            if os.environ.get('AWS_SHARED_CREDENTIALS_FILE') is None:
-                custom_credentials_file = os.path.join(aws, 'credentials')
-                os.environ['AWS_SHARED_CREDENTIALS_FILE']=custom_credentials_file
-
-            if os.environ.get('AWS_CONFIG_FILE') is None:
-                custom_config_file = os.path.join(aws, 'config')
-                os.environ['AWS_CONFIG_FILE']=custom_config_file
-
             self.s3 = boto3.client('s3')
     
         # Specify the S3 bucket name and root directory
@@ -562,7 +547,6 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", help="Output directory for processed data")
     parser.add_argument("-d", "--download", help="Download directory for raw data")
     parser.add_argument("-k", "--keep", help="Keep downloaded data (yes or no)", default="no")
-    parser.add_argument("-c", "--credential", help="Path to where aws credential and config files are saved")
 
     args = parser.parse_args()
 
@@ -574,9 +558,15 @@ if __name__ == "__main__":
     output_directory = args.output
     download_directory = args.download
     keep_downloaded_data = args.keep.lower() == "yes"
-    aws = args.credential
 
-    data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, download_source, output_directory, download_directory, keep_downloaded_data, aws)
+    # check environment variables
+    if (download_source == 's3') & (os.environ.get('AWS_SHARED_CREDENTIALS_FILE') is None) | (os.environ.get('AWS_CONFIG_FILE') is None):
+        if os.environ.get('AWS_SHARED_CREDENTIALS_FILE') is None:
+            raise ValueError('Please set up environment varialbes AWS_SHARED_CREDENTIALS_FILE')
+        if os.environ.get('AWS_CONFIG_FILE') is None:
+            raise ValueError('Please set up environment varialbes AWS_CONFIG_FILE')
+
+    data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, download_source, output_directory, download_directory, keep_downloaded_data)
     data_processor.download_data()
     
     if method == "wgrib2":
