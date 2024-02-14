@@ -364,10 +364,8 @@ class GFSDataProcessor:
                 450, 500, 550, 600, 650, 700, 750,
                 800, 850, 900, 925, 950, 975, 1000,
             ]
-            variables_to_extract['.pgrb2b.0p25.f000'] = {}
-            variables_to_extract['.pgrb2b.0p25.f000']['w, u, v, q, t, gh'] = {}
-            variables_to_extract['.pgrb2b.0p25.f000']['w, u, v, q, t, gh']['typeOfLevel'] = 'isobaricInhPa'
-            variables_to_extract['.pgrb2b.0p25.f000']['w, u, v, q, t, gh']['level'] = [125,175,225,775,825,875]
+            extra_levels = [125, 175, 225, 775, 825, 875]
+            file_extension_2b = '.pgrb2b.0p25.f000'
 
         # Create an empty list to store the extracted datasets
         mergeDSs = []
@@ -401,8 +399,18 @@ class GFSDataProcessor:
                             for var_name in variable_names:
 
                                 print(f'Get variable {var_name} from file {fname}:')
-                                mergeDAs.append(self.get_dataarray(grbs, var_name, levelType, desired_level))
-        
+                                da = self.get_dataarray(grbs, var_name, levelType, desired_level)
+
+                                #extract variables from pgrb2b
+                                if (levelType == 'isobaricInhPa') & (self.num_levels == 37):
+                                    fname2b = os.path.join(subfolder_path, f'gdas.t{hour}z{file_extension_2b}')
+                                    grbs2b = pygrib.open(fname2b)
+                                    da_extra = self.get_dataarray(grbs2b, var_name, levelType, extra_levels)
+                                    da_combined = da.combine_first(da_extra) 
+                                    mergeDAs.append(da_combined)
+                                else:
+                                    mergeDAs.append(da)
+
                     ds = xr.merge(mergeDAs)
 
                     mergeDSs.append(ds)
