@@ -20,6 +20,7 @@ class Netcdf2Grib:
             'mean_sea_level_pressure': [0, 'air_pressure_at_sea_level', 'Pa'],
             '2m_temperature': [2, 'air_temperature', 'K'],
             'total_precipitation_6hr': [0, 'precipitation_amount', 'kg m**-2'],
+            'total_precipitation': [0, 'precipitation_amount', 'kg m**-2'],
             'vertical_velocity': [None, 'lagrangian_tendency_of_air_pressure', 'Pa s**-1'],
             'specific_humidity': [None, 'specific_humidity', 'kg kg**-1'],
             'temperature': [None, 'air_temperature', 'K'],
@@ -71,6 +72,7 @@ class Netcdf2Grib:
         forecasts['level'].attrs['units'] = 'Pa'
         forecasts['geopotential'] = forecasts['geopotential'] / 9.80665
         forecasts['total_precipitation_6hr'] = forecasts['total_precipitation_6hr'] * 1000
+        forecasts['total_precipitation'] = forecasts['total_precipitation_6hr'].cumsum(axis=0)
 
         filename = os.path.join(outdir, "forecast_to_grib2.nc")
         forecasts.to_netcdf(filename)
@@ -123,11 +125,13 @@ class Netcdf2Grib:
                     cube_slice.standard_name = self.ATTR_MAPS[var_name][1]
                     cube_slice.units = self.ATTR_MAPS[var_name][2]
 
-                    if var_name not in ['mean_sea_level_pressure', 'total_precipitation_6hr']:
+                    if var_name not in ['mean_sea_level_pressure', 'total_precipitation_6hr', 'total_precipitation']:
                         cube_slice.add_aux_coord(iris.coords.DimCoord(self.ATTR_MAPS[var_name][0], standard_name='height', units='m'))
                         iris.save(cube_slice, outfile, saver='grib2', append=True)
                     elif var_name == 'total_precipitation_6hr':
                         iris_grib.save_messages(self.tweaked_messages(cube_slice, f'{hrs-6}-{hrs}'), outfile, append=True)
+                    elif var_name == 'total_precipitation':
+                        iris_grib.save_messages(self.tweaked_messages(cube_slice, f'0-{hrs}'), outfile, append=True)
                     elif var_name == 'mean_sea_level_pressure':
                         cube_slice.add_aux_coord(iris.coords.DimCoord(self.ATTR_MAPS[var_name][0], standard_name='altitude', units='m'))
                         iris_grib.save_messages(self.tweaked_messages(cube_slice, f'{hrs-6}-{hrs}'), outfile, append=True)
