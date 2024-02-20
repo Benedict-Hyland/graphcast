@@ -14,18 +14,18 @@ import iris
 import iris_grib
 import eccodes
 
-def subset_grib2(indir=None):
-    files = glob.glob(f'{indir}/graphcastgfs.*')
-    files.sort()
-
-    outdir = os.path.join(indir, 'north_america')
-    os.makedirs(outdir, exist_ok=True)
-    
-    lonMin, lonMax, latMin, latMax = 61.0, 299.0, -37.0, 37.0 
-    for grbfile in files:
-        outfile = f"{outdir}/{grbfile.split('/')[-1]}"
-        command = ['wgrib2', grbfile, '-small_grib', f'{lonMin}:{lonMax}', f'{latMin}:{latMax}', outfile]
-        subprocess.run(command, check=True)
+#def subset_grib2(indir=None):
+#    files = glob.glob(f'{indir}/graphcastgfs.*')
+#    files.sort()
+#
+#    outdir = os.path.join(indir, 'north_america')
+#    os.makedirs(outdir, exist_ok=True)
+#    
+#    lonMin, lonMax, latMin, latMax = 61.0, 299.0, -37.0, 37.0 
+#    for grbfile in files:
+#        outfile = f"{outdir}/{grbfile.split('/')[-1]}"
+#        command = ['wgrib2', grbfile, '-small_grib', f'{lonMin}:{lonMax}', f'{latMin}:{latMax}', outfile]
+#        subprocess.run(command, check=True)
 
 class Netcdf2Grib:
     def __init__(self):
@@ -156,6 +156,6 @@ class Netcdf2Grib:
             print(f'Deleting intermediate nc file {filename}: ')
             os.remove(filename)
 
-        #subset grib2 files
-        subset_grib2(outdir)
+        ##subset grib2 files
+        #subset_grib2(outdir)
 
