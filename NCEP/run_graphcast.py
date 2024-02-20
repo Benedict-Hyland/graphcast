@@ -29,7 +29,6 @@ from graphcast import normalization
 from graphcast import rollout
 
 from utils.nc2grib import Netcdf2Grib
-from utils.subset import subset_grib2
 
 class GraphCastModel:
     def __init__(self, pretrained_model_path, gdas_data_path, output_dir=None, num_pressure_levels=13, forecast_length=40):
@@ -178,10 +177,6 @@ class GraphCastModel:
 
         self.save_grib2(forecasts)
 
-        #subsetting grib2 files
-        subset_grib2(self.output_dir)
-
-            
     def save_grib2(self, forecasts):
 
         # Call and save forecasts in grib2
