@@ -7,20 +7,17 @@ Revision history:
     -20240125: Linlin Cui, added a capability to save output as grib2 format
     -20240205: Sadegh Tabas, made the code clearer, added 37 pressure level option, updated upload to s3
 '''
+import os
 import argparse
 from datetime import timedelta
-import pathlib
-import glob
 import dataclasses
 import functools
-import math
 import re
 import haiku as hk
 import jax
 import numpy as np
 import xarray
 import boto3
-import os
 import pandas as pd
 
 from graphcast import autoregressive
@@ -171,8 +168,8 @@ class GraphCastModel:
            
         # output = self.model(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
         forecasts = rollout.chunked_prediction(self.model, rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
-        filename = f"forecasts_levels-{self.num_pressure_levels}_steps-{self.forecast_length}.nc"
-        output_netcdf = os.path.join(self.output_dir, filename)
+        #filename = f"forecasts_levels-{self.num_pressure_levels}_steps-{self.forecast_length}.nc"
+        #output_netcdf = os.path.join(self.output_dir, filename)
         
         # save forecasts
         # forecasts.to_netcdf(output_netcdf)
@@ -180,7 +177,6 @@ class GraphCastModel:
 
         self.save_grib2(forecasts)
 
-            
     def save_grib2(self, forecasts):
 
         # Call and save forecasts in grib2
@@ -216,11 +212,12 @@ class GraphCastModel:
         s3_prefix = f'graphcastgfs.{date}/{time}/forecasts_{self.num_pressure_levels}_levels'
         
         for root, dirs, files in os.walk(self.output_dir):
+
             for file in files:
                 local_path = os.path.join(root, file)
                 relative_path = os.path.relpath(local_path, self.output_dir)
                 s3_path = os.path.join(s3_prefix, relative_path)
-                
+            
                 # Upload the file
                 s3.upload_file(local_path, self.s3_bucket_name, s3_path)
 
