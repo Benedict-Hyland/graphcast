@@ -73,13 +73,13 @@ class GFSDataProcessor:
         date_str_precip = datetime_before.strftime("%Y%m%d")
         time_str_precip = datetime_before.strftime("%H")
 
-        # List objects in the S3 directory
-        s3_objects = self.s3.list_objects_v2(Bucket=self.bucket_name, Prefix=s3_prefix)
-
         print("Previous Date:", date_str_precip)
         print("Previous Time:", time_str_precip)
 
         s3_prefix_precip = f"Sadegh.Tabas/gdas_wcoss2/{self.root_directory}.{date_str_precip}/{time_str_precip}/"
+        
+        # List objects in the S3 directory
+        s3_objects = self.s3.list_objects_v2(Bucket=self.bucket_name, Prefix=s3_prefix)
 
         # Filter objects based on the desired formats
         for obj in s3_objects.get('Contents', []):
