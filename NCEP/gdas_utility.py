@@ -72,29 +72,30 @@ class GFSDataProcessor:
         # Get the date string and time string from datetime objects
         date_str_precip = datetime_before.strftime("%Y%m%d")
         time_str_precip = datetime_before.strftime("%H")
-        
-        print("Previous Date:", date_str_precip)
-        print("Previous Time:", time_str_precip)
 
+        # Construct the S3 prefix for the directory
         s3_prefix_precip = f"Sadegh.Tabas/gdas_wcoss2/{self.root_directory}.{date_str_precip}/{time_str_precip}/"
 
-        # get acc precip from previous cycle 
-        # List objects in the S3 directory
-        s3_objects = self.s3.list_objects_v2(Bucket=self.bucket_name, Prefix=s3_prefix_precip)
-        
-        # Filter objects based on the desired formats
-        for obj in s3_objects.get('Contents', []):
-            obj_key = obj['Key']
-            if obj_key.endswith('pgrb2.0p25.f006'):
-                
-                # Define the local file path
-                local_file_path = os.path.join(local_directory, os.path.basename(obj_key))
-                
-                # Download the file from S3 to the local path
-                self.s3.download_file(self.bucket_name, obj_key, local_file_path)
-                print(f"Downloaded {obj_key} to {local_file_path}")
+        def get_data(s3_prefix, file_format, local_directory):
+            # List objects in the S3 directory
+            s3_objects = self.s3.list_objects_v2(Bucket=self.bucket_name, Prefix=s3_prefix)
+            for obj in s3_objects.get('Contents', []):
+                obj_key = obj['Key']
+                if obj_key.endswith(f'.{file_format}'):
+                    # Define the local file path
+                    local_file_path = os.path.join(local_directory, os.path.basename(obj_key))
 
-        # get other variables
+                    # Download the file from S3 to the local path
+                    self.s3.download_file(self.bucket_name, obj_key, local_file_path)
+                    print(f"Downloaded {obj_key} to {local_file_path}")
+
+                 
+        for file_format in self.file_formats:
+            if file_format !='pgrb2.0p25.f006':
+                get_data(s3_prefix, file_format, local_directory)
+            else:
+                get_data(s3_prefix_precip, file_format, local_directory)
+
         
     
     def nomads(self, date_str, time_str, local_directory):
