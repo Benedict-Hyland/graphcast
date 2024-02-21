@@ -560,6 +560,16 @@ if __name__ == "__main__":
     download_directory = args.download
     keep_downloaded_data = args.keep.lower() == "yes"
 
+    # Specify the path to your custom AWS credentials file
+    custom_credentials_file = '/contrib/Sadegh.Tabas/.aws/credentials'
+    
+    # Specify the path to your custom AWS config file
+    custom_config_file = '/contrib/Sadegh.Tabas/.aws/config'
+
+    # Set the environment variables
+    os.environ['AWS_SHARED_CREDENTIALS_FILE']=custom_credentials_file
+    os.environ['AWS_CONFIG_FILE']=custom_config_file
+
     # check environment variables
     if (download_source == 's3') & (os.environ.get('AWS_SHARED_CREDENTIALS_FILE') is None) | (os.environ.get('AWS_CONFIG_FILE') is None):
         if os.environ.get('AWS_SHARED_CREDENTIALS_FILE') is None:
