@@ -8,6 +8,7 @@ Revision history:
     -20240124: Linlin Cui, added pygrib method to extract variables from grib2 files
     -20240205: Sadegh Tabas, add 37 pressure levels, update s3 bucket
     -20240214: Linlin Cui, update pygrib method to account for 37 pressure levels
+    -20240221: Sadegh Tabas, update acc precip variable IC, s3 credentials
 '''
 import os
 import sys
