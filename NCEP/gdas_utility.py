@@ -8,7 +8,7 @@ Revision history:
     -20240124: Linlin Cui, added pygrib method to extract variables from grib2 files
     -20240205: Sadegh Tabas, add 37 pressure levels, update s3 bucket
     -20240214: Linlin Cui, update pygrib method to account for 37 pressure levels
-    -20240221: Sadegh Tabas, update acc precip variable IC, s3 credentials
+    -20240221: Sadegh Tabas, update acc precip variable IC, initialize s3 credentials for cloud machines
 '''
 import os
 import sys
@@ -560,15 +560,18 @@ if __name__ == "__main__":
     download_directory = args.download
     keep_downloaded_data = args.keep.lower() == "yes"
 
-    # Specify the path to your custom AWS credentials file
-    custom_credentials_file = '/contrib/Sadegh.Tabas/.aws/credentials'
+    # Initialize S3 credentials path
+    PW_CSP = os.getenv('PW_CSP', '')
+    if PW_CSP in ["aws", "google", "azure"]:
+        # Specify the path to your custom AWS credentials file
+        custom_credentials_file = '/contrib/Sadegh.Tabas/.aws/credentials'
+        
+        # Specify the path to your custom AWS config file
+        custom_config_file = '/contrib/Sadegh.Tabas/.aws/config'
     
-    # Specify the path to your custom AWS config file
-    custom_config_file = '/contrib/Sadegh.Tabas/.aws/config'
-
-    # Set the environment variables
-    os.environ['AWS_SHARED_CREDENTIALS_FILE']=custom_credentials_file
-    os.environ['AWS_CONFIG_FILE']=custom_config_file
+        # Set the environment variables
+        os.environ['AWS_SHARED_CREDENTIALS_FILE']=custom_credentials_file
+        os.environ['AWS_CONFIG_FILE']=custom_config_file
 
     # check environment variables
     if (download_source == 's3') & (os.environ.get('AWS_SHARED_CREDENTIALS_FILE') is None) | (os.environ.get('AWS_CONFIG_FILE') is None):
