@@ -168,8 +168,9 @@ class GraphCastModel:
            
         # output = self.model(self.model ,rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
         forecasts = rollout.chunked_prediction(self.model, rng=jax.random.PRNGKey(0), inputs=self.inputs, targets_template=self.targets * np.nan, forcings=self.forcings,)
-        #filename = f"forecasts_levels-{self.num_pressure_levels}_steps-{self.forecast_length}.nc"
-        #output_netcdf = os.path.join(self.output_dir, filename)
+        
+        # filename = f"forecasts_levels-{self.num_pressure_levels}_steps-{self.forecast_length}.nc"
+        # output_netcdf = os.path.join(self.output_dir, filename)
         
         # save forecasts
         # forecasts.to_netcdf(output_netcdf)
