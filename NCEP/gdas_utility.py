@@ -99,23 +99,35 @@ class GFSDataProcessor:
         
     
     def nomads(self, date_str, time_str, local_directory):
-        # Construct the URL for the data directory
-        gdas_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/{self.root_directory}.{date_str}/{time_str}/atmos/"
-        
-        # Get the list of files from the URL
-        response = requests.get(gdas_url)
-        if response.status_code == 200:
-            # Parse the HTML content using BeautifulSoup
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Find all anchor tags (links) in the HTML
-            anchor_tags = soup.find_all('a')
-            
-            # Extract file URLs from href attributes of anchor tags
-            file_urls = [gdas_url + tag['href'] for tag in anchor_tags if tag.get('href')]
 
-            for file_url in file_urls: 
-                for file_format in self.file_formats:
+        # Convert date_str and time_str to datetime object
+        datetime_obj = datetime.strptime(date_str + time_str, "%Y%m%d%H")
+
+        # Get the datetime 6 hours before
+        datetime_before = datetime_obj - timedelta(hours=6)
+
+        # Get the date string and time string from datetime objects
+        date_str_precip = datetime_before.strftime("%Y%m%d")
+        time_str_precip = datetime_before.strftime("%H")
+        
+        def get_data(date_str, time_str, file_format, local_directory):
+            # Construct the URL for the data directory
+            gdas_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/{self.root_directory}.{date_str}/{time_str}/atmos/"
+            
+            # Get the list of files from the URL
+            response = requests.get(gdas_url)
+            if response.status_code == 200:
+                # Parse the HTML content using BeautifulSoup
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Find all anchor tags (links) in the HTML
+                anchor_tags = soup.find_all('a')
+                
+                # Extract file URLs from href attributes of anchor tags
+                file_urls = [gdas_url + tag['href'] for tag in anchor_tags if tag.get('href')]
+    
+                for file_url in file_urls: 
+                    
                     if file_url.endswith(f'.{file_format}'):
                         
                         # Define the local file path
@@ -128,6 +140,15 @@ class GFSDataProcessor:
                             print(f"Download completed: {file_url} => {local_file_path}")
                         except subprocess.CalledProcessError as e:
                             print(f"Error downloading {file_url}: {e}")
+
+        for file_format in self.file_formats:
+            if file_format !='pgrb2.0p25.f006':
+                get_data(date_str, time_str, file_format, local_directory)
+            else:
+                get_data(date_str_precip, time_str_precip, file_format, local_directory)
+
+
+    
         
     def download_data(self):
         # Calculate the number of 6-hour intervals
