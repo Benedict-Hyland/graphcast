@@ -251,8 +251,8 @@ class GFSDataProcessor:
                                 # Open the extracted netcdf file as an xarray dataset
                                 ds = xr.open_dataset(output_file)
 
-                                if variable == '^(597):':
-                                    ds['time'] = ds['time'] - np.timedelta64(6, 'h')
+                                # if variable == '^(597):':
+                                #    ds['time'] = ds['time'] - np.timedelta64(6, 'h')
 
                                 # If specified, extract only the first time step
                                 if variable not in [':LAND:', ':HGT:']:
