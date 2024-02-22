@@ -219,7 +219,7 @@ class GFSDataProcessor:
                             levels = data['levels']
                             first_time_step_only = data.get('first_time_step_only', False)  # Default to False if not specified
 
-                            grib2_file = os.path.join(subfolder_path, f'gdas.t{hour}z{file_extension}')
+                            grib2_file = os.path.join(subfolder_path, f'gdas.t*z{file_extension}')
                     
                             # Extract the specified variables with levels from the GRIB2 file
                             for level in levels:
