@@ -401,7 +401,7 @@ class GFSDataProcessor:
                     mergeDAs = []
 
                     for file_extension, variables in variables_to_extract.items():
-                        pattern = os.path.join(subfolder_path, f'gdas.t{hour}z{file_extension}')
+                        pattern = os.path.join(subfolder_path, f'gdas.t*z{file_extension}')
                         # Use glob to search for files matching the pattern
                         matching_files = glob.glob(pattern)
                         
