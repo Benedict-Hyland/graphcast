@@ -535,7 +535,8 @@ class GFSDataProcessor:
             lats = lats[::-1]
     
         steps = variable_message[0].validDate
-    
+        if var_name=='tp':
+            steps = steps + timedelta(hours=6)
         #precipitation rate has two stepType ('instant', 'avg'), use 'instant')
         if len(variable_message) > 2:
             data = []
