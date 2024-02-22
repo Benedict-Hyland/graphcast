@@ -401,7 +401,16 @@ class GFSDataProcessor:
                     mergeDAs = []
 
                     for file_extension, variables in variables_to_extract.items():
-                        fname = os.path.join(subfolder_path, f'gdas.t{hour}z{file_extension}')
+                        pattern = os.path.join(subfolder_path, f'gdas.t{hour}z{file_extension}')
+                        # Use glob to search for files matching the pattern
+                            matching_files = glob.glob(pattern)
+                            
+                            # Check if there's exactly one matching file
+                            if len(matching_files) == 1:
+                                fname = matching_files[0]
+                                print("Found file:", grib2_file)
+                            else:
+                                print("Error: Found multiple or no matching files.")
 
                         #open grib file
                         grbs = pygrib.open(fname)
