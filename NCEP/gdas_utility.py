@@ -408,7 +408,7 @@ class GFSDataProcessor:
                         # Check if there's exactly one matching file
                         if len(matching_files) == 1:
                             fname = matching_files[0]
-                            print("Found file:", grib2_file)
+                            print("Found file:", fname)
                         else:
                             print("Error: Found multiple or no matching files.")
 
