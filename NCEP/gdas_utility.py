@@ -219,8 +219,17 @@ class GFSDataProcessor:
                             levels = data['levels']
                             first_time_step_only = data.get('first_time_step_only', False)  # Default to False if not specified
 
-                            grib2_file = os.path.join(subfolder_path, f'gdas.t*z{file_extension}')
-                    
+                            pattern = os.path.join(subfolder_path, f'gdas.t*z{file_extension}')
+                            # Use glob to search for files matching the pattern
+                            matching_files = glob.glob(pattern)
+                            
+                            # Check if there's exactly one matching file
+                            if len(matching_files) == 1:
+                                grib2_file = matching_files[0]
+                                print("Found file:", grib2_file)
+                            else:
+                                print("Error: Found multiple or no matching files.")
+                                
                             # Extract the specified variables with levels from the GRIB2 file
                             for level in levels:
                                 output_file = f'{variable}_{level}_{date_folder}_{hour}{file_extension}_{self.num_levels}.nc'
