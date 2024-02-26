@@ -51,15 +51,6 @@ echo "number of pressure levels: $num_pressure_levels"
 source /contrib/Sadegh.Tabas/miniconda3/etc/profile.d/conda.sh
 conda activate mlwp
 
-# Specify the path to your custom AWS credentials file
-custom_credentials_file="/contrib/Sadegh.Tabas/.aws/credentials"
-# Specify the path to your custom AWS config file
-custom_config_file="/contrib/Sadegh.Tabas/.aws/config"
-
-# Set the environment variables
-export AWS_SHARED_CREDENTIALS_FILE="$custom_credentials_file"
-export AWS_CONFIG_FILE="$custom_config_file"
-
 # going to the model directory
 cd /contrib/Sadegh.Tabas/operational/graphcast/NCEP/
 

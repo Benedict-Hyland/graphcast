@@ -8,6 +8,7 @@ Revision history:
     -20240124: Linlin Cui, added pygrib method to extract variables from grib2 files
     -20240205: Sadegh Tabas, add 37 pressure levels, update s3 bucket
     -20240214: Linlin Cui, update pygrib method to account for 37 pressure levels
+    -20240221: Sadegh Tabas, (i) updated acc precip variable IC, (ii) initialize s3 credentials for cloud machines, (iii) updated wgrib2 process, pygrib process, s3 and nomads functions
 '''
 import os
 import sys
@@ -60,40 +61,73 @@ class GFSDataProcessor:
     def s3bucket(self, date_str, time_str, local_directory):
         # Construct the S3 prefix for the directory
         s3_prefix = f"Sadegh.Tabas/gdas_wcoss2/{self.root_directory}.{date_str}/{time_str}/"
-        # List objects in the S3 directory
-        s3_objects = self.s3.list_objects_v2(Bucket=self.bucket_name, Prefix=s3_prefix)
 
-        # Filter objects based on the desired formats
-        for obj in s3_objects.get('Contents', []):
-            obj_key = obj['Key']
-            for file_format in self.file_formats:
+        # get prefix for precip from the previous cycle
+        # Convert date_str and time_str to datetime object
+        datetime_obj = datetime.strptime(date_str + time_str, "%Y%m%d%H")
+
+        # Get the datetime 6 hours before
+        datetime_before = datetime_obj - timedelta(hours=6)
+
+        # Get the date string and time string from datetime objects
+        date_str_precip = datetime_before.strftime("%Y%m%d")
+        time_str_precip = datetime_before.strftime("%H")
+
+        # Construct the S3 prefix for the directory
+        s3_prefix_precip = f"Sadegh.Tabas/gdas_wcoss2/{self.root_directory}.{date_str_precip}/{time_str_precip}/"
+
+        def get_data(s3_prefix, file_format, local_directory):
+            # List objects in the S3 directory
+            s3_objects = self.s3.list_objects_v2(Bucket=self.bucket_name, Prefix=s3_prefix)
+            for obj in s3_objects.get('Contents', []):
+                obj_key = obj['Key']
                 if obj_key.endswith(f'.{file_format}'):
-
                     # Define the local file path
                     local_file_path = os.path.join(local_directory, os.path.basename(obj_key))
 
                     # Download the file from S3 to the local path
                     self.s3.download_file(self.bucket_name, obj_key, local_file_path)
                     print(f"Downloaded {obj_key} to {local_file_path}")
+
+                 
+        for file_format in self.file_formats:
+            if file_format !='pgrb2.0p25.f006':
+                get_data(s3_prefix, file_format, local_directory)
+            else:
+                get_data(s3_prefix_precip, file_format, local_directory)
+
+        
     
     def nomads(self, date_str, time_str, local_directory):
-        # Construct the URL for the data directory
-        gdas_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/{self.root_directory}.{date_str}/{time_str}/atmos/"
-        
-        # Get the list of files from the URL
-        response = requests.get(gdas_url)
-        if response.status_code == 200:
-            # Parse the HTML content using BeautifulSoup
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Find all anchor tags (links) in the HTML
-            anchor_tags = soup.find_all('a')
-            
-            # Extract file URLs from href attributes of anchor tags
-            file_urls = [gdas_url + tag['href'] for tag in anchor_tags if tag.get('href')]
 
-            for file_url in file_urls: 
-                for file_format in self.file_formats:
+        # Convert date_str and time_str to datetime object
+        datetime_obj = datetime.strptime(date_str + time_str, "%Y%m%d%H")
+
+        # Get the datetime 6 hours before
+        datetime_before = datetime_obj - timedelta(hours=6)
+
+        # Get the date string and time string from datetime objects
+        date_str_precip = datetime_before.strftime("%Y%m%d")
+        time_str_precip = datetime_before.strftime("%H")
+        
+        def get_data(date_str, time_str, file_format, local_directory):
+            # Construct the URL for the data directory
+            gdas_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/{self.root_directory}.{date_str}/{time_str}/atmos/"
+            
+            # Get the list of files from the URL
+            response = requests.get(gdas_url)
+            if response.status_code == 200:
+                # Parse the HTML content using BeautifulSoup
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Find all anchor tags (links) in the HTML
+                anchor_tags = soup.find_all('a')
+                
+                # Extract file URLs from href attributes of anchor tags
+                file_urls = [gdas_url + tag['href'] for tag in anchor_tags if tag.get('href')]
+    
+                for file_url in file_urls: 
+                    
                     if file_url.endswith(f'.{file_format}'):
                         
                         # Define the local file path
@@ -106,6 +140,15 @@ class GFSDataProcessor:
                             print(f"Download completed: {file_url} => {local_file_path}")
                         except subprocess.CalledProcessError as e:
                             print(f"Error downloading {file_url}: {e}")
+
+        for file_format in self.file_formats:
+            if file_format !='pgrb2.0p25.f006':
+                get_data(date_str, time_str, file_format, local_directory)
+            else:
+                get_data(date_str_precip, time_str_precip, file_format, local_directory)
+
+
+    
         
     def download_data(self):
         # Calculate the number of 6-hour intervals
@@ -197,8 +240,17 @@ class GFSDataProcessor:
                             levels = data['levels']
                             first_time_step_only = data.get('first_time_step_only', False)  # Default to False if not specified
 
-                            grib2_file = os.path.join(subfolder_path, f'gdas.t{hour}z{file_extension}')
-                    
+                            pattern = os.path.join(subfolder_path, f'gdas.t*z{file_extension}')
+                            # Use glob to search for files matching the pattern
+                            matching_files = glob.glob(pattern)
+                            
+                            # Check if there's exactly one matching file
+                            if len(matching_files) == 1:
+                                grib2_file = matching_files[0]
+                                print("Found file:", grib2_file)
+                            else:
+                                print("Error: Found multiple or no matching files.")
+                                
                             # Extract the specified variables with levels from the GRIB2 file
                             for level in levels:
                                 output_file = f'{variable}_{level}_{date_folder}_{hour}{file_extension}_{self.num_levels}.nc'
@@ -220,8 +272,8 @@ class GFSDataProcessor:
                                 # Open the extracted netcdf file as an xarray dataset
                                 ds = xr.open_dataset(output_file)
 
-                                if variable == '^(597):':
-                                    ds['time'] = ds['time'] - np.timedelta64(6, 'h')
+                                # if variable == '^(597):':
+                                #    ds['time'] = ds['time'] - np.timedelta64(6, 'h')
 
                                 # If specified, extract only the first time step
                                 if variable not in [':LAND:', ':HGT:']:
@@ -370,7 +422,16 @@ class GFSDataProcessor:
                     mergeDAs = []
 
                     for file_extension, variables in variables_to_extract.items():
-                        fname = os.path.join(subfolder_path, f'gdas.t{hour}z{file_extension}')
+                        pattern = os.path.join(subfolder_path, f'gdas.t*z{file_extension}')
+                        # Use glob to search for files matching the pattern
+                        matching_files = glob.glob(pattern)
+                        
+                        # Check if there's exactly one matching file
+                        if len(matching_files) == 1:
+                            fname = matching_files[0]
+                            print("Found file:", fname)
+                        else:
+                            print("Error: Found multiple or no matching files.")
 
                         #open grib file
                         grbs = pygrib.open(fname)
@@ -495,7 +556,8 @@ class GFSDataProcessor:
             lats = lats[::-1]
     
         steps = variable_message[0].validDate
-    
+        if var_name=='tp':
+            steps = steps + timedelta(hours=6)
         #precipitation rate has two stepType ('instant', 'avg'), use 'instant')
         if len(variable_message) > 2:
             data = []
@@ -558,6 +620,19 @@ if __name__ == "__main__":
     output_directory = args.output
     download_directory = args.download
     keep_downloaded_data = args.keep.lower() == "yes"
+
+    # Initialize S3 credentials path
+    PW_CSP = os.getenv('PW_CSP', '')
+    if PW_CSP in ["aws", "google", "azure"]:
+        # Specify the path to your custom AWS credentials file
+        custom_credentials_file = '/contrib/Sadegh.Tabas/.aws/credentials'
+        
+        # Specify the path to your custom AWS config file
+        custom_config_file = '/contrib/Sadegh.Tabas/.aws/config'
+    
+        # Set the environment variables
+        os.environ['AWS_SHARED_CREDENTIALS_FILE']=custom_credentials_file
+        os.environ['AWS_CONFIG_FILE']=custom_config_file
 
     # check environment variables
     if (download_source == 's3') & (os.environ.get('AWS_SHARED_CREDENTIALS_FILE') is None) | (os.environ.get('AWS_CONFIG_FILE') is None):
