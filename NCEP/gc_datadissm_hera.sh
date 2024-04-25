@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # load necessary modules
-module use /scratch1/NCEPDEV/nems/role.epic/spack-stack/spack-stack-1.6.0/envs/unified-env/install/modulefiles/Core
+module use /scratch1/NCEPDEV/nems/role.epic/spack-stack/spack-stack-1.6.0/envs/unified-env-rocky8/install/modulefiles/Core
 module load stack-intel
 module load wgrib2
 module load awscli-v2
