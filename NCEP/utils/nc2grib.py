@@ -3,6 +3,7 @@
     History:
         01/26/2024: Linlin Cui (linlin.cui@noaa.gov), added function save_grib2 
         02/05/2024: Sadegh Tabas update the utility to a object-oriented format
+        04/25/2024: Sadegh Tabas, generate grib2 index files
 """
 
 import os
@@ -137,6 +138,10 @@ class Netcdf2Grib:
                     elif var_name == 'mean_sea_level_pressure':
                         cube_slice.add_aux_coord(iris.coords.DimCoord(self.ATTR_MAPS[var_name][0], standard_name='altitude', units='m'))
                         iris_grib.save_messages(self.tweaked_messages(cube_slice, f'{hrs-6}-{hrs}'), outfile, append=True)
+
+                # Use wgrib2 to generate index files
+                wgrib2_command = ['wgrib2', '-s', outfile, '>', outfile+'.idx']
+                subprocess.run(wgrib2_command, check=True)
 
         # Remove intermediate netCDF file
         if os.path.isfile(filename):
