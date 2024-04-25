@@ -139,9 +139,23 @@ class Netcdf2Grib:
                         cube_slice.add_aux_coord(iris.coords.DimCoord(self.ATTR_MAPS[var_name][0], standard_name='altitude', units='m'))
                         iris_grib.save_messages(self.tweaked_messages(cube_slice, f'{hrs-6}-{hrs}'), outfile, append=True)
 
-                # Use wgrib2 to generate index files
-                wgrib2_command = ['wgrib2', '-s', outfile, '>', outfile+'.idx']
-                subprocess.run(wgrib2_command, check=True)
+            # Use wgrib2 to generate index files
+            output_idx_file = f"{outfile}.idx"
+            
+            # Construct the wgrib2 command
+            wgrib2_command = ['wgrib2', '-s', outfile]
+            
+            try:
+                # Open the output file for writing
+                with open(output_idx_file, "w") as f_out:
+                    # Execute the wgrib2 command and redirect stdout to the output file
+                    subprocess.run(wgrib2_command, stdout=f_out, check=True)
+            
+                print(f"Index file created successfully: {output_idx_file}")
+            
+            except subprocess.CalledProcessError as e:
+                print(f"Error running wgrib2 command: {e}")
+    
 
         # Remove intermediate netCDF file
         if os.path.isfile(filename):
