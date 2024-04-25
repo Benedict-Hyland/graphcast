@@ -44,7 +44,7 @@ pip install --upgrade https://github.com/deepmind/graphcast/archive/master.zip
 ```
 
 ```bash
-pip isntall  pygrib requests bs4
+pip isntall pygrib requests bs4
 ```
 
 If your OS is MacOS, wget has to be installed:
