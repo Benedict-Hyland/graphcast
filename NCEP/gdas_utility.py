@@ -9,6 +9,7 @@ Revision history:
     -20240205: Sadegh Tabas, add 37 pressure levels, update s3 bucket
     -20240214: Linlin Cui, update pygrib method to account for 37 pressure levels
     -20240221: Sadegh Tabas, (i) updated acc precip variable IC, (ii) initialize s3 credentials for cloud machines, (iii) updated wgrib2 process, pygrib process, s3 and nomads functions
+    -20240425: Sadegh Tabas, (i) update s3 bucket resource, 
 '''
 import os
 import sys
@@ -39,10 +40,10 @@ class GFSDataProcessor:
         self.keep_downloaded_data = keep_downloaded_data
 
         if self.download_source == 's3':
-            self.s3 = boto3.client('s3')
+            self.s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
     
         # Specify the S3 bucket name and root directory
-        self.bucket_name = 'noaa-ncepdev-none-ca-ufs-cpldcld'
+        self.bucket_name = 'noaa-gfs-bdp-pds'
         
         self.root_directory = 'gdas'
 
@@ -60,7 +61,7 @@ class GFSDataProcessor:
     
     def s3bucket(self, date_str, time_str, local_directory):
         # Construct the S3 prefix for the directory
-        s3_prefix = f"Sadegh.Tabas/gdas_wcoss2/{self.root_directory}.{date_str}/{time_str}/"
+        s3_prefix = f"{self.root_directory}.{date_str}/{time_str}/"
 
         # get prefix for precip from the previous cycle
         # Convert date_str and time_str to datetime object
@@ -74,7 +75,7 @@ class GFSDataProcessor:
         time_str_precip = datetime_before.strftime("%H")
 
         # Construct the S3 prefix for the directory
-        s3_prefix_precip = f"Sadegh.Tabas/gdas_wcoss2/{self.root_directory}.{date_str_precip}/{time_str_precip}/"
+        s3_prefix_precip = f"{self.root_directory}.{date_str_precip}/{time_str_precip}/"
 
         def get_data(s3_prefix, file_format, local_directory):
             # List objects in the S3 directory
@@ -620,26 +621,6 @@ if __name__ == "__main__":
     output_directory = args.output
     download_directory = args.download
     keep_downloaded_data = args.keep.lower() == "yes"
-
-    # Initialize S3 credentials path
-    PW_CSP = os.getenv('PW_CSP', '')
-    if PW_CSP in ["aws", "google", "azure"]:
-        # Specify the path to your custom AWS credentials file
-        custom_credentials_file = '/contrib/Sadegh.Tabas/.aws/credentials'
-        
-        # Specify the path to your custom AWS config file
-        custom_config_file = '/contrib/Sadegh.Tabas/.aws/config'
-    
-        # Set the environment variables
-        os.environ['AWS_SHARED_CREDENTIALS_FILE']=custom_credentials_file
-        os.environ['AWS_CONFIG_FILE']=custom_config_file
-
-    # check environment variables
-    if (download_source == 's3') & (os.environ.get('AWS_SHARED_CREDENTIALS_FILE') is None) | (os.environ.get('AWS_CONFIG_FILE') is None):
-        if os.environ.get('AWS_SHARED_CREDENTIALS_FILE') is None:
-            raise ValueError('Please set up environment varialbes AWS_SHARED_CREDENTIALS_FILE')
-        if os.environ.get('AWS_CONFIG_FILE') is None:
-            raise ValueError('Please set up environment varialbes AWS_CONFIG_FILE')
 
     data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, download_source, output_directory, download_directory, keep_downloaded_data)
     data_processor.download_data()
