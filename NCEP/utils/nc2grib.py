@@ -102,7 +102,7 @@ class Netcdf2Grib:
             outfile = os.path.join(outdir, f'graphcastgfs.t{cycle:02d}z.pgrb2.0p25.f{hrs:03d}')
             print(outfile)
 
-            for cube in cubes:
+            for cube in sorted(cubes, key=lambda cube: cube.name()):
                 var_name = cube.name()
 
                 # Adjust cube for different variables
