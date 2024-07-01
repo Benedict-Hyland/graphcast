@@ -4,6 +4,7 @@
         01/26/2024: Linlin Cui (linlin.cui@noaa.gov), added function save_grib2 
         02/05/2024: Sadegh Tabas update the utility to a object-oriented format
         04/25/2024: Sadegh Tabas, generate grib2 index files
+        07/01/2024: Sadegh Tabas, sorted grib2 variables
 """
 
 import os
@@ -102,7 +103,7 @@ class Netcdf2Grib:
             outfile = os.path.join(outdir, f'graphcastgfs.t{cycle:02d}z.pgrb2.0p25.f{hrs:03d}')
             print(outfile)
 
-            for cube in cubes:
+            for cube in sorted(cubes, key=lambda cube: cube.name()):
                 var_name = cube.name()
 
                 # Adjust cube for different variables
