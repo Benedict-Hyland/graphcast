@@ -24,7 +24,7 @@ class Netcdf2Grib:
             'mean_sea_level_pressure': [0, 'air_pressure_at_sea_level', 'Pa'],
             '2m_temperature': [2, 'air_temperature', 'K'],
             'total_precipitation_6hr': [0, 'precipitation_amount', 'kg m**-2'],
-            'total_precipitation': [0, 'precipitation_amount', 'kg m**-2'],
+            'total_precipitation_cumsum': [0, 'precipitation_amount', 'kg m**-2'],
             'vertical_velocity': [None, 'lagrangian_tendency_of_air_pressure', 'Pa s**-1'],
             'specific_humidity': [None, 'specific_humidity', 'kg kg**-1'],
             'temperature': [None, 'air_temperature', 'K'],
