@@ -38,7 +38,7 @@ prev_datetime=$( date -d "$datetime 18 hour ago" "+%Y%m%d%H" )
 echo "Current state: $curr_datetime"
 echo "6 hours earlier state: $prev_datetime"
 
-forecast_length=40
+forecast_length=64
 echo "forecast length: $forecast_length"
 
 num_pressure_levels=13
