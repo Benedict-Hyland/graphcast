@@ -188,7 +188,7 @@ class GraphCastModel:
         for var in ds.data_vars:
             if 'long_name' in ds[var].attrs:
                 del ds[var].attrs['long_name']
-        ds = ds.isel(time=slice(1, None))
+        ds = ds.isel(time=slice(1, 2))
         ds['time'] = ds['time'] - pd.Timedelta(hours=6)
 
         converter.save_grib2(self.dates, ds, self.output_dir)
