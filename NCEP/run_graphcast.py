@@ -6,7 +6,7 @@ Revision history:
     -20240118: Sadegh Tabas, S3 bucket module to upload data, adding forecast length, Updating batch dataset to account for forecast length
     -20240125: Linlin Cui, added a capability to save output as grib2 format
     -20240205: Sadegh Tabas, made the code clearer, added 37 pressure level option, updated upload to s3
-    =20240731: Sadegh Tabas, added grib2 file for F000
+    -20240731: Sadegh Tabas, added grib2 file for F000
 '''
 import os
 import argparse
