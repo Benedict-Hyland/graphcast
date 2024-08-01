@@ -75,8 +75,9 @@ class Netcdf2Grib:
         forecasts['level'].attrs['long_name'] = 'pressure'
         forecasts['level'].attrs['units'] = 'Pa'
         forecasts['geopotential'] = forecasts['geopotential'] / 9.80665
-        forecasts['total_precipitation_6hr'] = forecasts['total_precipitation_6hr'] * 1000
-        forecasts['total_precipitation_cumsum'] = forecasts['total_precipitation_6hr'].cumsum(axis=0)
+        if 'total_precipitation_6hr' in forecasts:
+            forecasts['total_precipitation_6hr'] = forecasts['total_precipitation_6hr'] * 1000
+            forecasts['total_precipitation_cumsum'] = forecasts['total_precipitation_6hr'].cumsum(axis=0)
 
         filename = os.path.join(outdir, "forecast_to_grib2.nc")
         forecasts.to_netcdf(filename)
