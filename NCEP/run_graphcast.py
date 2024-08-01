@@ -6,6 +6,7 @@ Revision history:
     -20240118: Sadegh Tabas, S3 bucket module to upload data, adding forecast length, Updating batch dataset to account for forecast length
     -20240125: Linlin Cui, added a capability to save output as grib2 format
     -20240205: Sadegh Tabas, made the code clearer, added 37 pressure level option, updated upload to s3
+    =20240731: Sadegh Tabas, added grib2 file for F000
 '''
 import os
 import argparse
@@ -179,9 +180,20 @@ class GraphCastModel:
         self.save_grib2(forecasts)
 
     def save_grib2(self, forecasts):
-
-        # Call and save forecasts in grib2
         converter = Netcdf2Grib()
+
+        # Call and save f000 in grib2
+        ds = self.current_batch
+        ds = ds.drop_vars(['geopotential_at_surface','land_sea_mask'])
+        for var in ds.data_vars:
+            if 'long_name' in ds[var].attrs:
+                del ds[var].attrs['long_name']
+        ds = ds.isel(time=slice(1, None))
+        ds['time'] = ds['time'] - pd.Timedelta(hours=6)
+
+        converter.save_grib2(self.dates, ds, self.output_dir)
+        
+        # Call and save forecasts in grib2
         converter.save_grib2(self.dates, forecasts, self.output_dir)
         
     
