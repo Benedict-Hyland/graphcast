@@ -184,7 +184,7 @@ class GraphCastModel:
 
         # Call and save f000 in grib2
         ds = self.current_batch
-        ds = ds.drop_vars(['geopotential_at_surface','land_sea_mask'])
+        ds = ds.drop_vars(['geopotential_at_surface','land_sea_mask', 'total_precipitation_6hr'])
         for var in ds.data_vars:
             if 'long_name' in ds[var].attrs:
                 del ds[var].attrs['long_name']
