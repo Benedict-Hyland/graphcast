@@ -8,7 +8,6 @@ Revision history:
     -20240205: Sadegh Tabas, made the code clearer, added 37 pressure level option, updated upload to s3
     -20240731: Sadegh Tabas, added grib2 file for F000
     -20240815: Sadegh Tabas, update the directory of fine tuned model parameters
-    -20240911: Linlin Cui, temporarily disable deleting input file in this script and enable it in run_graphcast_exp.py script
 '''
 import os
 import argparse
@@ -41,9 +40,9 @@ class GraphCastModel:
         self.num_pressure_levels = num_pressure_levels
         
         if output_dir is None:
-            self.output_dir = os.path.join(os.getcwd(), f"forecasts_{str(self.num_pressure_levels)}_levels")  # Use current directory if not specified
+            self.output_dir = os.path.join(os.getcwd(), f"forecasts_{str(self.num_pressure_levels)}_levels_test")  # Use current directory if not specified
         else:
-            self.output_dir = os.path.join(output_dir, f"forecasts_{str(self.num_pressure_levels)}_levels")
+            self.output_dir = os.path.join(output_dir, f"forecasts_{str(self.num_pressure_levels)}_levels_test")
         os.makedirs(self.output_dir, exist_ok=True)
         
         self.params = None
@@ -64,7 +63,7 @@ class GraphCastModel:
     def load_pretrained_model(self):
         """Load pre-trained GraphCast model."""
         if self.num_pressure_levels==13:
-            model_weights_path = f"{self.pretrained_model_path}/params/GCGFSv2_finetuned - GDAS - ERA5 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz"
+            model_weights_path = f"{self.pretrained_model_path}/params/params_gdas-gdas_epoch_30.npz"
         else:
             model_weights_path = f"{self.pretrained_model_path}/params/GraphCast - ERA5 1979-2017 - resolution 0.25 - pressure levels 37 - mesh 2to6 - precipitation input and output.npz"
 
@@ -216,15 +215,16 @@ class GraphCastModel:
             time = input_file_name[time_start:time_start + 2]  # Extract 2 characters as the time
 
 
-        # Define S3 key paths for input and output files
-        input_s3_key = f'graphcastgfs.{date}/{time}/input/{self.gdas_data_path}'
+        ## Define S3 key paths for input and output files
+        #input_s3_key = f'graphcastgfs.{date}/{time}/input/{self.gdas_data_path}'
 
-        # Upload input file to S3
-        s3.upload_file(self.gdas_data_path, self.s3_bucket_name, input_s3_key)
+        ## Upload input file to S3
+        #s3.upload_file(self.gdas_data_path, self.s3_bucket_name, input_s3_key)
         
         # Upload output files to S3
         # Iterate over all files in the local directory and upload each one to S3
-        s3_prefix = f'graphcastgfs.{date}/{time}/forecasts_{self.num_pressure_levels}_levels'
+        s3_prefix = f'graphcastgfs.{date}/{time}/forecasts_{self.num_pressure_levels}_levels_test'
+        #s3_prefix = f'graphcastgfs.{date}/{time}/{self.output_dir}'
         
         for root, dirs, files in os.walk(self.output_dir):
 
@@ -244,8 +244,8 @@ class GraphCastModel:
             print("Removing input and forecast data from the specified directory...")
             try:
                 os.system(f"rm -rf {self.output_dir}")
-                #os.remove(self.gdas_data_path)
-                #print("Local input and output files deleted.")
+                os.remove(self.gdas_data_path)
+                print("Local input and output files deleted.")
             except Exception as e:
                 print(f"Error removing input and forecast data: {str(e)}")
 
