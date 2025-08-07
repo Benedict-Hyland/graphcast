@@ -1,13 +1,13 @@
 #!/bin/bash --login
 
 #SBATCH --nodes=1
-#SBATCH --account=nems
+#SBATCH --account=gpu-ai4wp
 #SBATCH --partition=u1-compute
-#SBATCH --cpus-per-task=80
+#SBATCH --cpus-per-task=120
 #SBATCH --time=2:00:00
-#SBATCH --job-name=graphcast
-#SBATCH --output=output_cpu.txt
-#SBATCH --error=error_cpu.txt
+#SBATCH --job-name=opt_test
+#SBATCH --output=slurm/solo_120cpus.out
+#SBATCH --error=slurm/solo_120cpus.err
 
 # load necessary modules
 module use /contrib/spack-stack/spack-stack-1.9.1/envs/ue-oneapi-2024.2.1/install/modulefiles/Core/
@@ -49,7 +49,7 @@ start_time=$(date +%s)
 echo "start runing graphcast to get real time 10-days forecasts for: $curr_datetime"
 
 # Run another Python script
-numactl --interleave=all python run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-"$num_pressure_levels"_steps-2.nc -w /scratch3/NCEPDEV/nems/Linlin.Cui/gc_weights -l "$forecast_length" -p "$num_pressure_levels" -u no -k yes
+numactl --interleave=all python run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-"$num_pressure_levels"_steps-2.nc -w /scratch3/NCEPDEV/nems/Linlin.Cui/gc_weights -l "$forecast_length" -p "$num_pressure_levels" -m iris -u no -k yes
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 

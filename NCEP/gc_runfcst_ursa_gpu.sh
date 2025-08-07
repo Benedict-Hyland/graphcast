@@ -2,18 +2,23 @@
 
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --account=nems
+#SBATCH --account=gpu-ai4wp
 #SBATCH --time=30:00
-#SBATCH --job-name=graphcast
-#SBATCH --output=output.txt
-#SBATCH --error=error.txt
+#SBATCH --job-name=solo_fcst
+#SBATCH --output=slurm/solo_fcst.out
+#SBATCH --error=slurm/solo_fcst.err
 #SBATCH --partition=u1-h100
 #SBATCH --qos=gpuwf
+#SBATCH --gres=gpu:h100:1
+#SBATCH --exclusive
 
 # load necessary modules
 module use /contrib/spack-stack/spack-stack-1.9.1/envs/ue-oneapi-2024.2.1/install/modulefiles/Core/
 module load stack-oneapi
 module load wgrib2
+
+source /scratch3/NCEPDEV/nems/Linlin.Cui/miniforge3/etc/profile.d/conda.sh
+conda activate graphcast
 
 # Get the UTC hour and calculate the time in the format yyyymmddhh
 current_hour=$(date -u +%H)
@@ -44,13 +49,10 @@ echo "forecast length: $forecast_length"
 num_pressure_levels=13
 echo "number of pressure levels: $num_pressure_levels"
 
-source /scratch3/NCEPDEV/nems/Linlin.Cui/miniforge3/etc/profile.d/conda.sh
-conda activate graphcast
-
 start_time=$(date +%s)
 echo "start runing graphcast to get real time 10-days forecasts for: $curr_datetime"
 
-numactl --interleave=all python run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-"$num_pressure_levels"_steps-2.nc -w /scratch3/NCEPDEV/nems/Linlin.Cui/gc_weights -l "$forecast_length" -p "$num_pressure_levels" -u no -k yes
+numactl --interleave=all python run_graphcast.py -i source-gdas_date-"$curr_datetime"_res-0.25_levels-"$num_pressure_levels"_steps-2.nc -w /scratch3/NCEPDEV/nems/Linlin.Cui/gc_weights -l "$forecast_length" -p "$num_pressure_levels" -m iris -u no -k yes
 
 end_time=$(date +%s)  # Record the end time in seconds since the epoch
 
