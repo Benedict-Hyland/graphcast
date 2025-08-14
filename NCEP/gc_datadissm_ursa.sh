@@ -14,7 +14,9 @@ module load stack-oneapi
 module load awscli-v2/2.15.53
 module list
 
+curr_datetime=$1
 num_pressure_levels=13
+COMROOT=/scratch3/NCEPDEV/stmp/Linlin.Cui/ptmp
 
 echo "Current state: $curr_datetime"
 
@@ -25,13 +27,13 @@ echo "Uploading member $gefs_member for: $curr_datetime"
 ymd=${curr_datetime:0:8}
 hour=${curr_datetime:8:2}
 
-# upload forecast outputs
-aws s3 --profile gcgfs sync $curr_datetime/forecasts_13_levels/ s3://noaa-nws-graphcastgfs-pds/graphcastgfs."$ymd"/"$hour"/forecasts_13_levels/
-rm -r $curr_datetime/forecasts_13_levels
-
-# upload input file
-aws s3 --profile gcgfs cp $curr_datetime/source-gdas_date-"$curr_datetime"_res-0.25_levels-"$num_pressure_levels"_steps-2.nc s3://noaa-nws-graphcastgfs-pds/graphcastgfs."$ymd"/"$hour"/input/
-rm $curr_datetime/source-gdas_date-"$curr_datetime"_res-0.25_levels-"$num_pressure_levels"_steps-2.nc
+## upload forecast outputs
+#aws s3 --profile gcgfs sync $curr_datetime/forecasts_13_levels/ s3://noaa-nws-graphcastgfs-pds/graphcastgfs."$ymd"/"$hour"/forecasts_13_levels/
+#rm -r $curr_datetime/forecasts_13_levels
+#
+## upload input file
+#aws s3 --profile gcgfs cp $curr_datetime/source-gdas_date-"$curr_datetime"_res-0.25_levels-"$num_pressure_levels"_steps-2.nc s3://noaa-nws-graphcastgfs-pds/graphcastgfs."$ymd"/"$hour"/input/
+#rm $curr_datetime/source-gdas_date-"$curr_datetime"_res-0.25_levels-"$num_pressure_levels"_steps-2.nc
 
 #upload tc tracker file
 modelname="mgfs"
