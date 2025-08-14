@@ -1,6 +1,9 @@
 #!/bin/bash --login
 
-cd /scratch3/NAGAPE/gpu-ai4wp/Linlin.Cui/eagle_solo
+cd /scratch3/NCEPDEV/nems/Linlin.Cui/git/LinlinCui-NOAA/graphcast/NCEP
+#directory where cronjob_ursa.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_DOURCE[0]}")" && pwd)"
+echo $SCRIPT_DIR
 
 # Get the UTC hour and calculate the time in the format yyyymmddhh
 current_hour=$(date -u +%H)
@@ -25,12 +28,12 @@ echo "Current state: $curr_datetime"
 echo "6 hours earlier state: $prev_datetime"
 
 echo "Job 1 is running"
-sh /scratch3/NAGAPE/gpu-ai4wp/Linlin.Cui/eagle_solo/gc_prepdata_ursa.sh $curr_datetime $prev_datetime
+sh $SCRIPT_DIR/gc_prepdata_ursa.sh $curr_datetime $prev_datetime
 sleep 60  # Simulating some work
 echo "Job 1 completed"
 
 echo "Job 2 is running"
-job2_id=$(sbatch /scratch3/NAGAPE/gpu-ai4wp/Linlin.Cui/eagle_solo/gc_runfcst_ursa_gpu.sh $curr_datetime| awk '{print $4}')
+job2_id=$(sbatch "$SCRIPT_DIR"/gc_runfcst_ursa_gpu.sh $curr_datetime| awk '{print $4}')
 
 # Wait for job 2 to complete
 while squeue -j $job2_id &>/dev/null; do
@@ -40,7 +43,7 @@ sleep 5  # Simulating some work
 echo "Job 2 completed"
 
 echo "Job 3: running TC tracker"
-job3_id=$(sbatch /scratch3/NAGAPE/gpu-ai4wp/Linlin.Cui/eagle_solo/jAIGFS_cyclone_track_00.ecf_ursa $curr_datetime "" | awk '{print $4}')
+job3_id=$(sbatch "$SCRIPT_DIR"/jAIGFS_cyclone_track_00.ecf_ursa $curr_datetime "" | awk '{print $4}')
 
 ## Wait for job 3 to complete
 #while squeue -j $job3_id &>/dev/null; do
@@ -50,6 +53,6 @@ job3_id=$(sbatch /scratch3/NAGAPE/gpu-ai4wp/Linlin.Cui/eagle_solo/jAIGFS_cyclone
 #echo "Job 3 completed"
 #
 #echo "Job 4 is running"
-#sh /scratch3/NAGAPE/gpu-ai4wp/Linlin.Cui/eagle_solo/gc_datadissm_ursa.sh $curr_datetime
+#sh $SCRIPT_DIR/gc_datadissm_ursa.sh $curr_datetime
 #sleep 5  # Simulating some work
 #echo "Job 4 completed"

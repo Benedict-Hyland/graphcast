@@ -16,7 +16,7 @@ module list
 
 curr_datetime=$1
 num_pressure_levels=13
-COMROOT=/scratch3/NCEPDEV/stmp/Linlin.Cui/ptmp
+COMROOT=${2:-/scratch3/NCEPDEV/stmp/$USER/ptmp}
 
 echo "Current state: $curr_datetime"
 
