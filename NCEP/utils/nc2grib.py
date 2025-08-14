@@ -33,11 +33,15 @@ class Netcdf2Grib:
             'v_component_of_wind': [None, 'y_wind', 'm s**-1'],
         }
 
-    def tweaked_messages(self, cube, time_range):
+    def tweaked_messages(self, cube, time_range=None):
         """
         Adjust GRIB messages based on cube properties.
         """
         for cube, grib_message in iris_grib.save_pairs_from_cube(cube):
+
+            eccodes.codes_set(grib_message, 'centre', 'kwbc')
+            eccodes.codes_set(grib_message, 'typeOfGeneratingProcess', 2)
+
             if cube.standard_name == 'precipitation_amount':
                 eccodes.codes_set(grib_message, 'stepType', 'accum')
                 eccodes.codes_set(grib_message, 'stepRange', time_range)
@@ -76,7 +80,7 @@ class Netcdf2Grib:
         forecasts['level'].attrs['units'] = 'Pa'
         forecasts['geopotential'] = forecasts['geopotential'] / 9.80665
         if 'total_precipitation_6hr' in forecasts:
-            forecasts['total_precipitation_6hr'] = forecasts['total_precipitation_6hr'] * 1000
+            forecasts['total_precipitation_6hr'] = (forecasts['total_precipitation_6hr'].clip(min=0)) * 1000
             forecasts['total_precipitation_cumsum'] = forecasts['total_precipitation_6hr'].cumsum(axis=0)
 
         filename = os.path.join(outdir, "forecast_to_grib2.nc")
@@ -124,7 +128,7 @@ class Netcdf2Grib:
                         cube_slice_level.add_aux_coord(iris.coords.DimCoord(hrs, standard_name='forecast_period', units='hours'))
                         cube_slice_level.standard_name = self.ATTR_MAPS[var_name][1]
                         cube_slice_level.units = self.ATTR_MAPS[var_name][2]
-                        iris.save(cube_slice_level, outfile, saver='grib2', append=True)
+                        iris_grib.save_messages(self.tweaked_messages(cube_slice_level), outfile, append=True)
                 else:
                     cube_slice.add_aux_coord(iris.coords.DimCoord(hrs, standard_name='forecast_period', units='hours'))
                     cube_slice.standard_name = self.ATTR_MAPS[var_name][1]
@@ -132,14 +136,14 @@ class Netcdf2Grib:
 
                     if var_name not in ['mean_sea_level_pressure', 'total_precipitation_6hr', 'total_precipitation_cumsum']:
                         cube_slice.add_aux_coord(iris.coords.DimCoord(self.ATTR_MAPS[var_name][0], standard_name='height', units='m'))
-                        iris.save(cube_slice, outfile, saver='grib2', append=True)
+                        iris_grib.save_messages(self.tweaked_messages(cube_slice), outfile, append=True)
                     elif var_name == 'total_precipitation_6hr':
                         iris_grib.save_messages(self.tweaked_messages(cube_slice, f'{hrs-6}-{hrs}'), outfile, append=True)
                     elif var_name == 'total_precipitation_cumsum':
                         iris_grib.save_messages(self.tweaked_messages(cube_slice, f'0-{hrs}'), outfile, append=True)
                     elif var_name == 'mean_sea_level_pressure':
                         cube_slice.add_aux_coord(iris.coords.DimCoord(self.ATTR_MAPS[var_name][0], standard_name='altitude', units='m'))
-                        iris_grib.save_messages(self.tweaked_messages(cube_slice, f'{hrs-6}-{hrs}'), outfile, append=True)
+                        iris_grib.save_messages(self.tweaked_messages(cube_slice), outfile, append=True)
 
             # Use wgrib2 to generate index files
             output_idx_file = f"{outfile}.idx"

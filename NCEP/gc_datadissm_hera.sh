@@ -7,8 +7,6 @@ module load wgrib2
 module load awscli-v2
 module list
 
-
-
 # Get the UTC hour and calculate the time in the format yyyymmddhh
 current_hour=$(date -u +%H)
 current_hour=$((10#$current_hour))
