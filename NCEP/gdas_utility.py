@@ -30,13 +30,14 @@ from bs4 import BeautifulSoup
 
 
 class GFSDataProcessor:
-    def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, download_source='nomads', output_directory=None, download_directory=None, keep_downloaded_data=True, aws=None):
+    def __init__(self, start_datetime, end_datetime, num_pressure_levels=13, download_source='nomads', output_directory=None, download_directory=None, download_pairs=True, keep_downloaded_data=True, aws=None):
         self.start_datetime = start_datetime
         self.end_datetime = end_datetime
         self.num_levels = num_pressure_levels
         self.download_source = download_source
         self.output_directory = output_directory
         self.download_directory = download_directory
+        self.download_pairs = download_pairs
         self.keep_downloaded_data = keep_downloaded_data
 
         if self.download_source == 's3':
@@ -54,11 +55,11 @@ class GFSDataProcessor:
             self.local_base_directory = os.path.join(self.download_directory, self.bucket_name+'_'+str(self.num_levels))
 
         # List of file formats to download
-        if self.num_levels == 13:     
-            self.file_formats = ['pgrb2.0p25.f000', 'pgrb2.0p25.f006'] # , '0p25.f001'
-        else:
-            self.file_formats = ['pgrb2.0p25.f000', 'pgrb2b.0p25.f000', 'pgrb2.0p25.f006'] # , '0p25.f001'
-    
+        self.forecast_hours = [f"f{h:03d}" for h in range(0, 12)]
+        self.file_formats = [f"pgrb2.0p25.{fh}" for fh in self.forecast_hours]
+        if self.num_levels == 37:
+            self.file_formats += [f"pgrb2b.0p25.{fh}" for fh in self.forecast_hours]
+
     def s3bucket(self, date_str, time_str, local_directory):
         # Construct the S3 prefix for the directory
         s3_prefix = f"{self.root_directory}.{date_str}/{time_str}/"
@@ -289,7 +290,12 @@ class GFSDataProcessor:
                                 # Optionally, remove the intermediate GRIB2 file
                                 # os.remove(output_file)
         print("Merging grib2 files:")
-        ds = xr.merge(extracted_datasets)
+        # ds = xr.merge(extracted_datasets) [OLD FORMAT - FAILS WITH NEWER XARRAY]
+        ds = xr.combine_by_coords(
+            extracted_datasets,
+            combine_attrs="drop_conflicts",
+            join="outer"
+        )
         
         print("Merging process completed.")
         
@@ -349,6 +355,7 @@ class GFSDataProcessor:
 
         if self.output_directory is None:
             self.output_directory = os.getcwd()  # Use current directory if not specified
+        os.makedirs(self.output_directory, exist_ok=True)
         output_netcdf = os.path.join(self.output_directory, f"source-gdas_date-{date}_res-0.25_levels-{self.num_levels}_steps-{steps}.nc")
 
         # Save the merged dataset as a NetCDF file
@@ -609,6 +616,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--source", help="the source repository to download gdas grib2 data, options: nomads (up-to-date), s3", default="s3")
     parser.add_argument("-o", "--output", help="Output directory for processed data")
     parser.add_argument("-d", "--download", help="Download directory for raw data")
+    parser.add_argument("-p", "--pair", help="Write six 2-step files per cycle: (f000,f006)..(f005,f011)", default="true")
     parser.add_argument("-k", "--keep", help="Keep downloaded data (yes or no)", default="no")
 
     args = parser.parse_args()
@@ -620,9 +628,10 @@ if __name__ == "__main__":
     method = args.method
     output_directory = args.output
     download_directory = args.download
+    download_pairs = args.pair.capitalise()
     keep_downloaded_data = args.keep.lower() == "yes"
 
-    data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, download_source, output_directory, download_directory, keep_downloaded_data)
+    data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, download_source, output_directory, download_directory, download_pairs, keep_downloaded_data)
     data_processor.download_data()
     
     if method == "wgrib2":
