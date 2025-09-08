@@ -181,45 +181,55 @@ class GFSDataProcessor:
 
         print("Download completed.")
 
-    def process_data_with_wgrib2(self):
+    def process_data_with_wgrib2(self, forecast_hours=None):
         # Define the directory where your GRIB2 files are located
         data_directory = self.local_base_directory
 
+        # Default to original behavior if no forecast hours specified
+        if forecast_hours is None:
+            forecast_hours = ['f000', 'f006']
+
         # Create a dictionary to specify the variables, levels, and whether to extract only the first time step (if needed)
-        variables_to_extract = {
-            '.pgrb2.0p25.f000': {
-                ':HGT:': {
-                    'levels': [':surface:'],
-                    'first_time_step_only': True,  # Extract only the first time step
-                },
-                ':TMP:': {
-                    'levels': [':2 m above ground:'],
-                },
-                ':PRMSL:': {
-                    'levels': [':mean sea level:'],
-                },
-                ':VGRD|UGRD:': {
-                    'levels': [':10 m above ground:'],
-                },
-                ':SPFH|VVEL|VGRD|UGRD|HGT|TMP:': {
-                    'levels': [':(50|100|150|200|250|300|400|500|600|700|850|925|1000) mb:'],
-                },
-            },
-            '.pgrb2.0p25.f006': {
-                ':LAND:': {
-                    'levels': [':surface:'],
-                    'first_time_step_only': True,  # Extract only the first time step
-                },
-                '^(597):': {  # APCP
-                    'levels': [':surface:'],
-                },
-            }
-        }
+        variables_to_extract = {}
+        
+        for fh in forecast_hours:
+            if fh in ['f000', 'f001', 'f002', 'f003', 'f004', 'f005']:
+                variables_to_extract[f'.pgrb2.0p25.{fh}'] = {
+                    ':HGT:': {
+                        'levels': [':surface:'],
+                        'first_time_step_only': True,
+                    },
+                    ':TMP:': {
+                        'levels': [':2 m above ground:'],
+                    },
+                    ':PRMSL:': {
+                        'levels': [':mean sea level:'],
+                    },
+                    ':VGRD|UGRD:': {
+                        'levels': [':10 m above ground:'],
+                    },
+                    ':SPFH|VVEL|VGRD|UGRD|HGT|TMP:': {
+                        'levels': [':(50|100|150|200|250|300|400|500|600|700|850|925|1000) mb:'],
+                    },
+                }
+            elif fh in ['f006', 'f007', 'f008', 'f009', 'f010', 'f011']:
+                variables_to_extract[f'.pgrb2.0p25.{fh}'] = {
+                    ':LAND:': {
+                        'levels': [':surface:'],
+                        'first_time_step_only': True,
+                    },
+                    '^(597):': {  # APCP
+                        'levels': [':surface:'],
+                    },
+                }
+
         if self.num_levels == 37:
-            variables_to_extract['.pgrb2.0p25.f000'][':SPFH|VVEL|VGRD|UGRD|HGT|TMP:']['levels'] = [':(1|2|3|5|7|10|20|30|50|70|100|150|200|250|300|350|400|450|500|550|600|650|700|750|800|850|900|925|950|975|1000) mb:']
-            variables_to_extract['.pgrb2b.0p25.f000'] = {}
-            variables_to_extract['.pgrb2b.0p25.f000'][':SPFH|VVEL|VGRD|UGRD|HGT|TMP:'] = {}
-            variables_to_extract['.pgrb2b.0p25.f000'][':SPFH|VVEL|VGRD|UGRD|HGT|TMP:']['levels'] = [':(125|175|225|775|825|875) mb:']
+            for fh in forecast_hours:
+                if fh in ['f000', 'f001', 'f002', 'f003', 'f004', 'f005']:
+                    variables_to_extract[f'.pgrb2.0p25.{fh}'][':SPFH|VVEL|VGRD|UGRD|HGT|TMP:']['levels'] = [':(1|2|3|5|7|10|20|30|50|70|100|150|200|250|300|350|400|450|500|550|600|650|700|750|800|850|900|925|950|975|1000) mb:']
+                    variables_to_extract[f'.pgrb2b.0p25.{fh}'] = {}
+                    variables_to_extract[f'.pgrb2b.0p25.{fh}'][':SPFH|VVEL|VGRD|UGRD|HGT|TMP:'] = {}
+                    variables_to_extract[f'.pgrb2b.0p25.{fh}'][':SPFH|VVEL|VGRD|UGRD|HGT|TMP:']['levels'] = [':(125|175|225|775|825|875) mb:']
        
         # Create an empty list to store the extracted datasets
         extracted_datasets = []
@@ -352,11 +362,16 @@ class GFSDataProcessor:
         # Define the output NetCDF file
         date = (self.start_datetime + timedelta(hours=6)).strftime('%Y%m%d%H')
         steps = str(len(ds['time']))
+        
+        if forecast_hours is None:
+            fh_suffix = ""
+        else:
+            fh_suffix = f"_fh-{'_'.join(forecast_hours)}"
 
         if self.output_directory is None:
             self.output_directory = os.getcwd()  # Use current directory if not specified
         os.makedirs(self.output_directory, exist_ok=True)
-        output_netcdf = os.path.join(self.output_directory, f"source-gdas_date-{date}_res-0.25_levels-{self.num_levels}_steps-{steps}.nc")
+        output_netcdf = os.path.join(self.output_directory, f"source-gdas_date-{date}_res-0.25_levels-{self.num_levels}_steps-{steps}{fh_suffix}.nc")
 
         # Save the merged dataset as a NetCDF file
         ds.to_netcdf(output_netcdf)
@@ -369,6 +384,33 @@ class GFSDataProcessor:
             self.remove_downloaded_data()
 
         print(f"Process completed successfully, your inputs for GraphCast model generated at:\n {output_netcdf}")
+        return output_netcdf
+
+    def process_forecast_pairs_with_wgrib2(self):
+        """
+        Process forecast pairs using the refactored process_data_with_wgrib2 function.
+        Creates six 2-step files per cycle: (f000,f006), (f001,f007), (f002,f008), 
+        (f003,f009), (f004,f010), (f005,f011)
+        """
+        forecast_hours = [f"f{h:03d}" for h in range(0, 12)]
+        pairs = [(forecast_hours[h], forecast_hours[h+6]) for h in range(0, 6)]
+        
+        print(f"Processing {len(pairs)} forecast pairs...")
+        output_files = []
+        
+        for i, (fh1, fh2) in enumerate(pairs):
+            print(f"Processing pair {i+1}/{len(pairs)}: ({fh1}, {fh2})")
+            
+            output_file = self.process_data_with_wgrib2(forecast_hours=[fh1, fh2])
+            output_files.append(output_file)
+            
+            print(f"Completed pair ({fh1}, {fh2}): {output_file}")
+        
+        print(f"All forecast pairs processed successfully. Generated {len(output_files)} files:")
+        for output_file in output_files:
+            print(f"  - {output_file}")
+        
+        return output_files
 
     def process_data_with_pygrib(self):
         # Define the directory where your GRIB2 files are located
@@ -628,16 +670,19 @@ if __name__ == "__main__":
     method = args.method
     output_directory = args.output
     download_directory = args.download
-    download_pairs = args.pair.capitalise()
+    download_pairs = args.pair.lower()
     keep_downloaded_data = args.keep.lower() == "yes"
 
     data_processor = GFSDataProcessor(start_datetime, end_datetime, num_pressure_levels, download_source, output_directory, download_directory, download_pairs, keep_downloaded_data)
     data_processor.download_data()
     
     if method == "wgrib2":
-      data_processor.process_data_with_wgrib2()
+        if download_pairs and download_pairs == "true":
+            data_processor.process_forecast_pairs_with_wgrib2()
+        else:
+            data_processor.process_data_with_wgrib2()
     elif method == "pygrib":
-      data_processor.process_data_with_pygrib()
+        data_processor.process_data_with_pygrib()
     else:
-      raise NotImplementedError(f"Method {method} is not supported!")
+        raise NotImplementedError(f"Method {method} is not supported!")
 
