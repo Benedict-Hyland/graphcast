@@ -197,7 +197,7 @@ class GFSDataProcessor:
                 variables_to_extract[f'.pgrb2.0p25.{fh}'] = {
                     ':HGT:': {
                         'levels': [':surface:'],
-                        'first_time_step_only': True if fh == 'f000' else False,
+                        'first_time_step_only': True,
                     },
                     ':TMP:': {
                         'levels': [':2 m above ground:'],
@@ -216,7 +216,7 @@ class GFSDataProcessor:
                 variables_to_extract[f'.pgrb2.0p25.{fh}'] = {
                     ':LAND:': {
                         'levels': [':surface:'],
-                        'first_time_step_only': True if fh == 'f006' else False,
+                        'first_time_step_only': True,
                     },
                     '^(597):': {  # APCP
                         'levels': [':surface:'],
@@ -363,7 +363,7 @@ class GFSDataProcessor:
         date = (self.start_datetime + timedelta(hours=6)).strftime('%Y%m%d%H')
         steps = str(len(ds['time']))
         
-        if forecast_hours is None or forecast_hours == ['f000', 'f006']:
+        if forecast_hours is None:
             fh_suffix = ""
         else:
             fh_suffix = f"_fh-{'_'.join(forecast_hours)}"
