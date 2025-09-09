@@ -14,3 +14,5 @@ dependencies:
   - iris-grib
   - jupyterlab
   - pip
+  - flax
+  - jax
