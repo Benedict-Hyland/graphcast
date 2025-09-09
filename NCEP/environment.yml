@@ -14,7 +14,3 @@ dependencies:
   - iris-grib
   - jupyterlab
   - pip
-  - pip:
-    - git+https://github.com/Benedict-Hyland/graphcast.git@main#egg=graphcast
-    - flax==0.8.3
-    - jax==0.4.31
