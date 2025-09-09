@@ -2,7 +2,7 @@ name: graphcast
 channels:
   - conda-forge
 dependencies:
-  - python>=3.10
+  - python=3.11
   - dm-tree
   - netcdf4
   - xarray
@@ -15,5 +15,6 @@ dependencies:
   - jupyterlab
   - pip
   - pip:
-    - https://github.com/deepmind/graphcast/archive/master.zip
-    - flax
+    - git+https://github.com/Benedict-Hyland/graphcast.git@main#egg=graphcast
+    - flax==0.8.3
+    - jax==0.4.31
