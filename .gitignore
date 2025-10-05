@@ -1,3 +1,5 @@
 *.egg*
 __pycache__
 *.swp
+download_data/
+output_data/
