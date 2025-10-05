@@ -20,6 +20,9 @@ import xarray as xr
 import requests
 from bs4 import BeautifulSoup
 
+# Only one file allowed to be open to avoid bloat issues
+# xr.set_options(file_cache_maxsize=1)
+
 # https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20250910/18/atmos/gfs.t18z.pgrb2.0p25.f000
 
 class DataProcessor:
@@ -30,8 +33,10 @@ class DataProcessor:
         self.download_directory = download_directory
         self.download_pairs = download_pairs
 
-        if not datetime.strptime(self.forecast_day, "%Y%m%d"):
-            return f"Forecast Day {self.forecast_day} could not be converted to format YYYYMMDD"
+        try:
+            self.start_datetime = datetime.strptime(self.forecast_day, "%Y%m%d")
+        except ValueError:
+            raise ValueError(f"Forecast Day {self.forecast_day} is not in YYYYMMDD format.")
 
         if self.forecast_run not in ["00", "06", "12", "18"]:
             return f"Forecast Run ({forecast_run}) is not 00, 06, 12, or 18"
@@ -59,6 +64,8 @@ class DataProcessor:
         base_file = f'{self.file_base}.{forecast_hour}'
 
         response = requests.get(self.base_url)
+        if response.status_code != 200:
+            raise ConnectionError(f"Could not access {self.base_url} (HTTP {response.status_code}\n{response})")
         if response.status_code == 200:
             # Parse the HTML content using BeautifulSoup
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -77,14 +84,21 @@ class DataProcessor:
                     
                     # Download the file from Nomads to the local path
                     try:
-                        cmd = ['wget', '-qO', local_file_path, file_url]
-                        subprocess.run(cmd, check=True)
+                        # cmd = ['wget', '-qO', local_file_path, file_url]
+                        # subprocess.run(cmd, check=True)
+                        r = requests.get(file_url, stream=True)
+                        r.raise_for_status()
+                        with open(local_file_path, "wb") as f:
+                            for chunk in r.iter_content(8192):
+                                f.write(chunk)
                     except subprocess.CalledProcessError as e:
                         print(f"Error downloading {file_url}: {e}")
 
 
     def process_data(self, forecast_hour):
         file_name = f'{self.file_base}.{forecast_hour}'
+
+        variables_to_extract = {}
 
         variables_to_extract[file_name] = {
             ':LAND:': {
@@ -113,12 +127,12 @@ class DataProcessor:
         files = []
         
         if os.path.exists(os.path.join(self.download_directory, file_name)):
-            for file_name, variable_data in variables_to_extract.items():
+            for grib_file, variable_data in variables_to_extract.items():
                 for variable, data in variable_data.items():
                     levels = data['levels']
                     first_time_step_only = data.get('first_time_step_only', False)  # Default to False if not specified
 
-                    matching_files = glob.glob(os.path.join(self.download_directory, file_name))
+                    matching_files = glob.glob(os.path.join(self.download_directory, grib_file))
                     
                     if len(matching_files) == 1:
                         grib2_file = matching_files[0]
@@ -155,7 +169,7 @@ class DataProcessor:
                                 # Append the dataset to the list
                                 ds = ds.isel(time=0)
                                 extracted_datasets.append(ds)
-                                variables_to_extract[file_name][variable]['first_time_step_only'] = False
+                                variables_to_extract[grib_file][variable]['first_time_step_only'] = False
                         
                         # Optionally, remove the intermediate GRIB2 file
                         # os.remove(output_file)
@@ -220,27 +234,19 @@ class DataProcessor:
         # Update total_precipitation_6hr unit to (m) from (kg/m^2) by dividing it by 1000kg/m³
         ds['total_precipitation_6hr'] = ds['total_precipitation_6hr'] / 1000
         
-        # Define the output NetCDF file
-        date = (self.start_datetime + timedelta(hours=6)).strftime('%Y%m%d%H')
-        steps = str(len(ds['time']))
-        
-        if forecast_hours is None:
-            fh_suffix = ""
-        else:
-            fh_suffix = f"_fh-{'_'.join(forecast_hours)}"
-
         if self.output_directory is None:
             self.output_directory = os.getcwd()  # Use current directory if not specified
         
         processed_dir = os.path.join(self.output_directory, "processed_netcdfs")
 
         os.makedirs(processed_dir, exist_ok=True)
-        output_netcdf = os.path.join(processed_dir, f"source-gdas_date-{date}_res-0.25_levels-{self.num_levels}_steps-{steps}{fh_suffix}.nc")
+        output_netcdf = os.path.join(processed_dir, f"{forecast_hour}.nc")
 
         # Save the merged dataset as a NetCDF file
         ds.to_netcdf(output_netcdf)
         print(f"Saved output to {output_netcdf}")
         for file in files:
+            ds.close()
             os.remove(file)
             
         print(f"Process completed successfully, your inputs for GraphCast model generated at:\n {output_netcdf}")
@@ -315,7 +321,7 @@ if __name__ == "__main__":
     forecast_run = args.run
     output_directory = args.output
     download_directory = args.download
-    download_pairs = args.pair.lower()
+    download_pairs = str(args.pair).lower() in ("true", "1", "yes", "y", "t")
 
     data_processor = DataProcessor(download_date, forecast_run, output_directory, download_directory, download_pairs)
     
