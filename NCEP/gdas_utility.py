@@ -258,9 +258,6 @@ class DataProcessor:
         ds_a = xr.open_dataset(output_a)
         ds_b = xr.open_dataset(output_b)
 
-        # Ensuring both datasets are on common coordinates (They should be)
-        ds_a, ds_b = xr.align(ds_a, ds_b, join="exact")
-
         merged = xr.concat([ds_a, ds_b], dim="time")
 
         merged = merged.sortby("time")
