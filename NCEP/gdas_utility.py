@@ -128,18 +128,18 @@ class DataProcessor:
         
         if os.path.exists(os.path.join(self.download_directory, file_name)):
             for grib_file, variable_data in variables_to_extract.items():
+                if len(matching_files) == 1:
+                    grib2_file = matching_files[0]
+                    print("Found file:", grib2_file)
+                else:
+                    print(f"Error: Found multiple or no matching files: ({len(matching_files)}). Matching Files: {matching_files}.")
+                        
                 for variable, data in variable_data.items():
                     levels = data['levels']
                     first_time_step_only = data.get('first_time_step_only', False)  # Default to False if not specified
 
                     matching_files = glob.glob(os.path.join(self.download_directory, grib_file))
                     
-                    if len(matching_files) == 1:
-                        grib2_file = matching_files[0]
-                        print("Found file:", grib2_file)
-                    else:
-                        print(f"Error: Found multiple or no matching files: ({len(matching_files)}). Matching Files: {matching_files}.")
-                        
                     # Extract the specified variables with levels from the GRIB2 file
                     for level in levels:
                         output_file = f'{variable}_{level}_{self.forecast_day}_{self.forecast_run}Z_{forecast_hour}_13.nc'
@@ -156,7 +156,7 @@ class DataProcessor:
                         
                         # Use wgrib2 to extract the variable with level
                         wgrib2_command = ['wgrib2', '-nc_nlev', f'{number_of_levels}', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
-                        subprocess.run(wgrib2_command, check=True)
+                        subprocess.run(wgrib2_command, check=True, stdout=subprocess.DEVNULL)
 
                         # Open the extracted netcdf file as an xarray dataset
                         ds = xr.open_dataset(output_file)
@@ -174,15 +174,13 @@ class DataProcessor:
                         # Optionally, remove the intermediate GRIB2 file
                         # os.remove(output_file)
 
-        print("Merging grib2 files:")
+        print("Combining grib2 files:")
         # ds = xr.merge(extracted_datasets) [OLD FORMAT - FAILS WITH NEWER XARRAY]
         ds = xr.combine_by_coords(
             extracted_datasets,
             combine_attrs="drop_conflicts",
             join="outer"
         )
-        
-        print("Merging process completed.")
 
         print("Processing, Renaming and Reshaping the data")
         # Drop the 'level' dimension
@@ -246,7 +244,7 @@ class DataProcessor:
         print(f"Saved output to {output_netcdf}")
         for file in files:
             ds.close()
-            os.remove(file)
+            # os.remove(file)
             
         print(f"Process completed successfully, your inputs for GraphCast model generated at:\n {output_netcdf}")
         return output_netcdf
