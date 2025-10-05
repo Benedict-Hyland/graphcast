@@ -231,7 +231,7 @@ class DataProcessor:
         ds['geopotential'] = ds['geopotential'] * 9.80665
 
         # Update total_precipitation_6hr unit to (m) from (kg/m^2) by dividing it by 1000kg/m³
-        ds['total_precipitation_6hr'] = ds['total_precipitation_6hr'] / 1000
+        # ds['total_precipitation_6hr'] = ds['total_precipitation_6hr'] / 1000
         
         if self.output_directory is None:
             self.output_directory = os.getcwd()  # Use current directory if not specified
