@@ -303,7 +303,7 @@ class DataProcessor:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download and process GDAS data")
-    parser.add_argument("download_date", help="Start datetime in the format 'YYYYMMDDHH'")
+    parser.add_argument("download_date", help="Start datetime in the format 'YYYYMMDD'")
     parser.add_argument("-r", "--run", help="The HH value that you want to download")
     parser.add_argument("-o", "--output", help="Output directory for processed data")
     parser.add_argument("-d", "--download", help="Download directory for raw data")
@@ -311,9 +311,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    download_date = datetime.strptime(args.download_date, "%Y%m%d%H")
+    download_date = args.download_date
     forecast_run = args.run
-    num_pressure_levels = int(args.levels)
     output_directory = args.output
     download_directory = args.download
     download_pairs = args.pair.lower()
