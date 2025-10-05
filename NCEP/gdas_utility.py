@@ -217,7 +217,7 @@ class DataProcessor:
         ds['level'] = ds['level'].astype('int32')
 
         # Adjust time values relative to the first time step
-        ds['time'] = ds['time'] - ds.time[0]
+        # ds['time'] = ds['time'] - ds.time[0]
 
         # Expand dimensions
         ds = ds.expand_dims(dim='batch')
