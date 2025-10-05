@@ -199,7 +199,6 @@ class DataProcessor:
             'TMP_2maboveground': '2m_temperature',
             'UGRD_10maboveground': '10m_u_component_of_wind',
             'VGRD_10maboveground': '10m_v_component_of_wind',
-            'APCP_surface': 'total_precipitation_6hr',
             'HGT': 'geopotential',
             'TMP': 'temperature',
             'SPFH': 'specific_humidity',
