@@ -128,6 +128,7 @@ class DataProcessor:
         
         if os.path.exists(os.path.join(self.download_directory, file_name)):
             for grib_file, variable_data in variables_to_extract.items():
+                matching_files = glob.glob(os.path.join(self.download_directory, grib_file))
                 if len(matching_files) == 1:
                     grib2_file = matching_files[0]
                     print("Found file:", grib2_file)
@@ -137,8 +138,6 @@ class DataProcessor:
                 for variable, data in variable_data.items():
                     levels = data['levels']
                     first_time_step_only = data.get('first_time_step_only', False)  # Default to False if not specified
-
-                    matching_files = glob.glob(os.path.join(self.download_directory, grib_file))
                     
                     # Extract the specified variables with levels from the GRIB2 file
                     for level in levels:
