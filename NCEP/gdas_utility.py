@@ -134,8 +134,8 @@ class DataProcessor:
                 else:
                     raise RuntimeError(f"Failed to download {base_file} after {max_retries} attempts")
 
-    # If we exit loop without success
-    raise RuntimeError(f"Failed to download {base_file}")
+        # If we exit loop without success
+        raise RuntimeError(f"Failed to download {base_file}")
 
 
     def process_data(self, forecast_hour):
