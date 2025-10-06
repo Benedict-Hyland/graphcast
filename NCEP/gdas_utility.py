@@ -174,12 +174,22 @@ class DataProcessor:
                         # os.remove(output_file)
 
         print("Combining grib2 files:")
-        # ds = xr.merge(extracted_datasets) [OLD FORMAT - FAILS WITH NEWER XARRAY]
-        ds = xr.combine_by_coords(
+        template_lat = np.round(np.arange(-90, 90.25, 0.25), 3)
+        template_lon = np.round(np.arange(0, 360, 0.25), 3)
+        ds = ds.assign_coords(lat=template_lat, lon=template_lon)
+        ds = xr.merge(
             extracted_datasets,
             combine_attrs="drop_conflicts",
-            join="outer"
+            join="outer",
+            compat="override"
         )
+        
+        # ds = xr.combine_by_coords(
+        #     extracted_datasets,
+        #     combine_attrs="drop_conflicts",
+        #     join="outer",
+        #     compat="override"
+        # )
 
         print("Processing, Renaming and Reshaping the data")
         # Drop the 'level' dimension
