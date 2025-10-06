@@ -10,7 +10,7 @@ Revision history:
 '''
 import os
 import sys
-from time import time
+from time import time, sleep
 import glob
 import argparse
 import subprocess
@@ -61,38 +61,81 @@ class DataProcessor:
 
 
     def download_data(self, forecast_hour):
-        base_file = f'{self.file_base}.{forecast_hour}'
+        base_file = f"{self.file_base}.{forecast_hour}"
+        local_file_path = os.path.join(self.download_directory, base_file)
 
-        response = requests.get(self.base_url)
+        # Ensure download directory exists
+        os.makedirs(self.download_directory, exist_ok=True)
+
+        # Get the listing page from NOMADS
+        response = requests.get(self.base_url, timeout=30)
         if response.status_code != 200:
-            raise ConnectionError(f"Could not access {self.base_url} (HTTP {response.status_code}\n{response})")
-        if response.status_code == 200:
-            # Parse the HTML content using BeautifulSoup
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Find all anchor tags (links) in the HTML
-            anchor_tags = soup.find_all('a')
-            
-            # Extract file URLs from href attributes of anchor tags
-            file_urls = [self.base_url + tag['href'] for tag in anchor_tags if tag.get('href')]
+            raise ConnectionError(f"Could not access {self.base_url} (HTTP {response.status_code})")
 
-            for file_url in file_urls: 
-                if file_url.endswith(base_file):
-                    
-                    # Define the local file path
-                    local_file_path = os.path.join(self.download_directory, base_file)
-                    
-                    # Download the file from Nomads to the local path
-                    try:
-                        # cmd = ['wget', '-qO', local_file_path, file_url]
-                        # subprocess.run(cmd, check=True)
-                        r = requests.get(file_url, stream=True)
-                        r.raise_for_status()
-                        with open(local_file_path, "wb") as f:
-                            for chunk in r.iter_content(8192):
-                                f.write(chunk)
-                    except subprocess.CalledProcessError as e:
-                        print(f"Error downloading {file_url}: {e}")
+        # Parse HTML and find matching GRIB file URL
+        soup = BeautifulSoup(response.content, "html.parser")
+        file_urls = [self.base_url + tag["href"] for tag in soup.find_all("a") if tag.get("href")]
+        file_url = next((url for url in file_urls if url.endswith(base_file)), None)
+
+        if not file_url:
+            raise FileNotFoundError(f"Could not find matching GRIB2 file for {base_file}")
+
+        # --- Start download with integrity checks ---
+        max_retries = 5
+        backoff = 5  # seconds
+        temp_path = local_file_path + ".part"
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                # Get remote file size
+                head = requests.head(file_url, timeout=15)
+                expected_size = int(head.headers.get("Content-Length", 0))
+
+                # Resume if partial file exists
+                resume_header = {}
+                pos = 0
+                if os.path.exists(temp_path):
+                    pos = os.path.getsize(temp_path)
+                    if pos < expected_size:
+                        resume_header = {"Range": f"bytes={pos}-"}
+                        print(f"Resuming {base_file} from {pos:,} bytes...")
+                    else:
+                        # already complete
+                        os.rename(temp_path, local_file_path)
+                        print(f"{base_file} already fully downloaded.")
+                        return
+
+                # Start streaming download
+                with requests.get(file_url, headers=resume_header, stream=True, timeout=60) as r:
+                    r.raise_for_status()
+                    mode = "ab" if resume_header else "wb"
+                    with open(temp_path, mode) as f:
+                        for chunk in r.iter_content(chunk_size=1024 * 1024):
+                            if not chunk:
+                                continue
+                            f.write(chunk)
+
+                # Verify integrity
+                final_size = os.path.getsize(temp_path)
+                if expected_size and final_size < expected_size:
+                    raise IOError(f"Incomplete download ({final_size}/{expected_size} bytes)")
+
+                # Rename to final name only when successful
+                os.rename(temp_path, local_file_path)
+                print(f"✅ Downloaded {base_file} ({final_size/1e6:.1f} MB)")
+                return
+
+            except Exception as e:
+                print(f"⚠️ Download failed (attempt {attempt}/{max_retries}): {e}")
+                if attempt < max_retries:
+                    print(f"Retrying in {backoff} seconds...")
+                    sleep(backoff)
+                    backoff *= 2
+                else:
+                    raise RuntimeError(f"Failed to download {base_file} after {max_retries} attempts")
+
+    # If we exit loop without success
+    raise RuntimeError(f"Failed to download {base_file}")
 
 
     def process_data(self, forecast_hour):
@@ -183,7 +226,7 @@ class DataProcessor:
             join="outer",
             compat="override"
         )
-        
+
         # ds = xr.combine_by_coords(
         #     extracted_datasets,
         #     combine_attrs="drop_conflicts",
