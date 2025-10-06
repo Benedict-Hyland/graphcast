@@ -19,6 +19,7 @@ import re
 import xarray as xr
 import requests
 from bs4 import BeautifulSoup
+import numpy as np
 
 # Only one file allowed to be open to avoid bloat issues
 # xr.set_options(file_cache_maxsize=1)
