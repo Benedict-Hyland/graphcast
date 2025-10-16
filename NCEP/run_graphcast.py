@@ -64,10 +64,12 @@ class GraphCastModel:
     def load_pretrained_model(self):
         """Load pre-trained GraphCast model."""
         if self.num_pressure_levels==13:
-            model_weights_path = f"{self.pretrained_model_path}/params/GCGFSv2_finetuned - GDAS - ERA5 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz"
+            # model_weights_path = f"{self.pretrained_model_path}/params/GCGFSv2_finetuned - GDAS - ERA5 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz"
+            model_weights_path = f"{self.pretrained_model_path}/params/GraphCast_operational - ERA5-HRES 1979-2021 - resolution 0.25 - pressure levels 13 - mesh 2to6 - precipitation output only.npz"
         else:
+            # model_weights_path = f"{self.pretrained_model_path}/params/GraphCast - ERA5 1979-2017 - resolution 0.25 - pressure levels 37 - mesh 2to6 - precipitation input and output.npz"
             model_weights_path = f"{self.pretrained_model_path}/params/GraphCast - ERA5 1979-2017 - resolution 0.25 - pressure levels 37 - mesh 2to6 - precipitation input and output.npz"
-
+        
         with open(model_weights_path, "rb") as f:
             ckpt = checkpoint.load(f, graphcast.CheckPoint)
             self.params = ckpt.params
