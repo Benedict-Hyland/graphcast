@@ -56,7 +56,7 @@ class DataProcessor:
         else:
             os.makedirs(self.output_directory, exist_ok=True)
 
-        self.forecast_hours = [f"f{h:03d}" for h in range(0, 12)]
+        self.forecast_hours = [f"f{h:03d}" for h in range(0, 12+1)]
         self.base_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.{self.forecast_day}/{self.forecast_run}/atmos/"
         self.file_base = f"gfs.t{self.forecast_run}z.pgrb2.0p25"
 
@@ -337,8 +337,8 @@ class DataProcessor:
         if self.download_pairs:
             print("Processing Pairs")
             forecast_pairs = [
-                (self.forecast_hours[i], self.forecast_hours[i + 5])
-                for i in range(len(self.forecast_hours) - 5)
+                (self.forecast_hours[i], self.forecast_hours[i + 6])
+                for i in range(len(self.forecast_hours) - 6)
             ]
             for forecast_a, forecast_b in forecast_pairs:
                 print(f"Starting Processing of Merged Pairs: ({forecast_a}, {forecast_b})")
