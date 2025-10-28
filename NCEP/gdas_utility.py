@@ -20,6 +20,7 @@ import xarray as xr
 import requests
 from bs4 import BeautifulSoup
 import numpy as np
+import pandas as pd
 
 # Only one file allowed to be open to avoid bloat issues
 # xr.set_options(file_cache_maxsize=1)
@@ -142,91 +143,90 @@ class DataProcessor:
     def process_data(self, forecast_hour):
         file_name = f'{self.file_base}.{forecast_hour}'
 
-        variables_to_extract = {}
-
-        variables_to_extract[file_name] = {
-            ':LAND:': {
-                'levels': [':surface:'],
-                'first_time_step_only': True,  # Extract only the first time step
-            },
-            ':HGT:': {
-                'levels': [':surface:'],
-                'first_time_step_only': True,  # Extract only the first time step
-            },
-            ':TMP:': {
-                'levels': [':2 m above ground:'],
-            },
-            ':PRMSL:': {
-                'levels': [':mean sea level:'],
-            },
-            ':VGRD|UGRD:': {
-                'levels': [':10 m above ground:'],
-            },
-            ':SPFH|VVEL|VGRD|UGRD|HGT|TMP:': {
-                'levels': [':(50|100|150|200|250|300|400|500|600|700|850|925|1000) mb:'],
+        variables_to_extract = {
+            file_name: {
+                ':LAND:': {
+                    'levels': [':surface:'],
+                    'first_time_step_only': True,  # Extract only the first time step
+                },
+                ':HGT:': {
+                    'levels': [':surface:'],
+                    'first_time_step_only': True,  # Extract only the first time step
+                },
+                ':TMP:': {
+                    'levels': [':2 m above ground:'],
+                },
+                ':PRMSL:': {
+                    'levels': [':mean sea level:'],
+                },
+                ':VGRD|UGRD:': {
+                    'levels': [':10 m above ground:'],
+                },
+                ':SPFH|VVEL|VGRD|UGRD|HGT|TMP:': {
+                    'levels': [':(50|100|150|200|250|300|400|500|600|700|850|925|1000) mb:'],
+                }
             }
         }
 
         extracted_datasets = []
         files = []
         
-        if os.path.exists(os.path.join(self.download_directory, file_name)):
-            for grib_file, variable_data in variables_to_extract.items():
-                matching_files = glob.glob(os.path.join(self.download_directory, grib_file))
-                if len(matching_files) == 1:
-                    grib2_file = matching_files[0]
-                    print("Found file:", grib2_file)
-                else:
-                    print(f"Error: Found multiple or no matching files: ({len(matching_files)}). Matching Files: {matching_files}.")
-                        
-                for variable, data in variable_data.items():
-                    levels = data['levels']
-                    first_time_step_only = data.get('first_time_step_only', False)  # Default to False if not specified
+        grib_path = os.path.join(self.download_directory, file_name)
+        if not os.path.exists(grib_path):
+            raise FileNotFoundError(f"Expected GRIB file missing: {grib_path}")
+
+        for grib_file, variable_data in variables_to_extract.items():
+            matching_files = glob.glob(os.path.join(self.download_directory, grib_file))
+            if len(matching_files) != 1:
+                raise RuntimeError(f"Found multiple or no matching files ({len(matching_files)}): {matching_files}")
+            
+            grib2_file = matching_files[0]
+            print("Found file:", grib2_file)
+
+            for variable, data in variable_data.items():
+                levels = data['levels']
+                first_time_step_only = data.get('first_time_step_only', False)  # Default to False if not specified
+                
+                # Extract the specified variables with levels from the GRIB2 file
+                for level in levels:
+                    output_file = f'{variable}_{level}_{self.forecast_day}_{self.forecast_run}Z_{forecast_hour}_13.nc'
+                    files.append(output_file)
                     
-                    # Extract the specified variables with levels from the GRIB2 file
-                    for level in levels:
-                        output_file = f'{variable}_{level}_{self.forecast_day}_{self.forecast_run}Z_{forecast_hour}_13.nc'
-                        files.append(output_file)
-                        
-                        # Extracting levels using regular expression
-                        matches = re.findall(r'\d+', level)
-                        
-                        # Convert the extracted matches to integers
-                        curr_levels = [int(match) for match in matches]
-                        
-                        # Get the number of levels
-                        number_of_levels = len(curr_levels)
-                        
-                        # Use wgrib2 to extract the variable with level
-                        wgrib2_command = ['wgrib2', '-nc_nlev', f'{number_of_levels}', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
-                        subprocess.run(wgrib2_command, check=True, stdout=subprocess.DEVNULL)
+                    # Extracting levels using regular expression
+                    matches = re.findall(r'\d+', level)
+                    
+                    # Convert the extracted matches to integers
+                    curr_levels = [int(match) for match in matches]
+                    
+                    # Get the number of levels
+                    number_of_levels = len(curr_levels)
+                    
+                    # Use wgrib2 to extract the variable with level
+                    wgrib2_command = ['wgrib2', '-nc_nlev', f'{number_of_levels}', grib2_file, '-match', f'{variable}', '-match', f'{level}', '-netcdf', output_file]
+                    subprocess.run(wgrib2_command, check=True, stdout=subprocess.DEVNULL)
 
-                        # Open the extracted netcdf file as an xarray dataset
-                        ds = xr.open_dataset(output_file)
+                    # Open the extracted netcdf file as an xarray dataset
+                    ds_part = xr.open_dataset(output_file)
 
-                        # If specified, extract only the first time step
-                        if variable not in [':LAND:', ':HGT:']:
-                            extracted_datasets.append(ds)
-                        else:
-                            if first_time_step_only:
-                                # Append the dataset to the list
-                                ds = ds.isel(time=0)
-                                extracted_datasets.append(ds)
-                                variables_to_extract[grib_file][variable]['first_time_step_only'] = False
-                        
-                        # Optionally, remove the intermediate GRIB2 file
-                        # os.remove(output_file)
+                    # If specified, extract only the first time step
+                    if variable in [':LAND:', ':HGT:'] and first_time_step_only:
+                        ds_part = ds_part.isel(time=0)
+                        variables_to_extract[grib_file][variable]['first_time_step_only'] = False
+                    
+                    extracted_datasets.append(ds_part)
+                    # Optionally, remove the intermediate GRIB2 file
+                    # os.remove(output_file)
 
-        print("Combining grib2 files:")
-        template_lat = np.round(np.arange(-90, 90.25, 0.25), 3)
-        template_lon = np.round(np.arange(0, 360, 0.25), 3)
-        ds = ds.assign_coords(lat=template_lat, lon=template_lon)
+        # print("Combining grib2 files:")
+        # template_lat = np.round(np.arange(-90, 90.25, 0.25), 3)
+        # template_lon = np.round(np.arange(0, 360, 0.25), 3)
+        # ds = ds.assign_coords(lat=template_lat, lon=template_lon)
         ds = xr.merge(
             extracted_datasets,
             combine_attrs="drop_conflicts",
             join="outer",
             compat="override"
-        )
+        ).sort_by("time")
 
         # ds = xr.combine_by_coords(
         #     extracted_datasets,
@@ -235,9 +235,21 @@ class DataProcessor:
         #     compat="override"
         # )
 
+        # 1) absolute datetimes along time (datetime64[ns])
+        abs_time = pd.to_datetime(ds["time"].values)
+        ds = ds.assign_coords(datetime=("time", abs_time))
+
+        # 2) time as 0-based timedelta64 starting at 0, stepping 6h
+        ds = ds.assign_coords(time=("time", (abs_time - abs_time[0]).astype("timedelta64[ns]")))
+
+        # 3) batch dimension: make datetime shape [batch, time]
+        ds = ds.expand_dims("batch")
+        ds["datetime"] = ds["datetime"].expand_dims("batch")
+
         print("Processing, Renaming and Reshaping the data")
         # Drop the 'level' dimension
-        ds = ds.drop_dims('level')
+        if "level" in ds.dims:
+            ds = ds.drop_dims("level")
 
         # Rename variables and dimensions
         ds = ds.rename({
@@ -259,30 +271,33 @@ class DataProcessor:
         })
 
         # Assign 'datetime' as coordinates
-        ds = ds.assign_coords(datetime=ds.time)
+        # ds = ds.assign_coords(datetime=ds.time)
         
         # Convert data types
-        ds['lat'] = ds['lat'].astype('float32')
-        ds['lon'] = ds['lon'].astype('float32')
-        ds['level'] = ds['level'].astype('int32')
+        if 'lat' in ds:   ds['lat']   = ds['lat'].astype('float32')
+        if 'lon' in ds:   ds['lon']   = ds['lon'].astype('float32')
+        if 'level' in ds: ds['level'] = ds['level'].astype('int32')
 
         # Adjust time values relative to the first time step
-        # ds['time'] = ds['time'] - ds.time[0]
+        # ds["time"] = ds["time"] - ds.time[0]
 
         # Expand dimensions
-        ds = ds.expand_dims(dim='batch')
-        ds['datetime'] = ds['datetime'].expand_dims(dim='batch')
+        # ds = ds.expand_dims(dim='batch')
+        # ds['datetime'] = ds['datetime'].expand_dims(dim='batch')
 
         # Squeeze dimensions
-        ds['geopotential_at_surface'] = ds['geopotential_at_surface'].squeeze('batch')
-        ds['land_sea_mask'] = ds['land_sea_mask'].squeeze('batch')
+        # ds['geopotential_at_surface'] = ds['geopotential_at_surface'].squeeze('batch')
+        # ds['land_sea_mask'] = ds['land_sea_mask'].squeeze('batch')
 
         # Update geopotential unit to m2/s2 by multiplying 9.80665
         ds['geopotential_at_surface'] = ds['geopotential_at_surface'] * 9.80665
         ds['geopotential'] = ds['geopotential'] * 9.80665
 
-        # Update total_precipitation_6hr unit to (m) from (kg/m^2) by dividing it by 1000kg/m³
-        # ds['total_precipitation_6hr'] = ds['total_precipitation_6hr'] / 1000
+        # Sanity Checks
+        assert str(ds.time.dtype).startswith("timedelta64")
+        assert str(ds.datetime.dtype).startswith("datetime64")
+        assert 'batch' in ds.dims and ds['datetime'].ndim == 2
+        assert not pd.isna(ds['datetime']).any()
         
         if self.output_directory is None:
             self.output_directory = os.getcwd()  # Use current directory if not specified
@@ -302,6 +317,35 @@ class DataProcessor:
         print(f"Process completed successfully, your inputs for GraphCast model generated at:\n {output_netcdf}")
         return output_netcdf
 
+    @staticmethod
+    def _ensure_normalized(ds: xr.Dataset) -> xr.Dataset:
+        """Verify and coerce GraphCast-required time/datetime/batch structure."""
+        ds = ds.sortby("time")
+
+        # If time is datetime-like, convert to timedelta starting at 0
+        if str(ds.time.dtype).startswith("datetime64"):
+            abs_time = pd.to_datetime(ds["time"].values)
+            ds = ds.assign_coords(datetime=("time", abs_time))
+            ds = ds.assign_coords(time=("time", (abs_time - abs_time[0]).astype("timedelta64[ns]")))
+        elif "datetime" not in ds.coords:
+            # Build datetime from a nominal origin if missing (shouldn't happen if saved by process_data)
+            abs_time = pd.Timestamp("1970-01-01") + pd.to_timedelta(ds["time"].values)
+            ds = ds.assign_coords(datetime=("time", abs_time))
+
+        # Ensure batch dim and 2D datetime
+        if "batch" not in ds.dims:
+            ds = ds.expand_dims("batch")
+        if ds["datetime"].ndim == 1:
+            ds["datetime"] = ds["datetime"].expand_dims("batch")
+
+        # Sanity
+        assert str(ds.time.dtype).startswith("timedelta64")
+        assert str(ds.datetime.dtype).startswith("datetime64")
+        assert 'batch' in ds.dims and ds['datetime'].ndim == 2
+        assert not pd.isna(ds['datetime']).any()
+
+        return ds
+
     def process_pairs(self, forecast_a, forecast_b):
         output_a = self.process_data(forecast_a)
         output_b = self.process_data(forecast_b)
@@ -309,9 +353,24 @@ class DataProcessor:
         ds_a = xr.open_dataset(output_a)
         ds_b = xr.open_dataset(output_b)
 
-        merged = xr.concat([ds_a, ds_b], dim="time")
+        # Ensure both datasets have GraphCast-compatible structure
+        ds_a = self._ensure_normalized(ds_a)
+        ds_b = self._ensure_normalized(ds_b)
 
-        merged = merged.sortby("time")
+        #  Shift the second chunk’s time by +6 hours so the merged axis is [0h, 6h]
+        shift = np.timedelta64(6, "h")
+        ds_b = ds_b.assign_coords(time=ds_b.time + shift)
+
+        merged = xr.concat([ds_a, ds_b], dim="time").sortby("time")
+
+        # Final sanity checks
+        assert str(merged.time.dtype).startswith("timedelta64")
+        assert str(merged.datetime.dtype).startswith("datetime64")
+        assert 'batch' in merged.dims and merged['datetime'].ndim == 2
+        assert not pd.isna(merged['datetime']).any()
+        # Strictly increasing time
+        tvals = merged.time.values
+        assert (tvals[1:] - tvals[:-1] > np.timedelta64(0, 'ns')).all()
 
         merged_dir = os.path.join(self.output_directory, "merged_forecasts")
         os.makedirs(merged_dir, exist_ok=True)
@@ -322,9 +381,15 @@ class DataProcessor:
         )
 
         merged.to_netcdf(merged_file)
-
         print(f"Merged dataset saved to: {merged_file}")
+
+        # Close
+        ds_a.close()
+        ds_b.close()
+        merged.close()
+
         return merged_file
+
 
     def start(self):
 
