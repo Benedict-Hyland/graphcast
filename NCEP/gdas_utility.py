@@ -358,8 +358,15 @@ class DataProcessor:
         ds_b = self._ensure_normalized(ds_b)
 
         #  Shift the second chunk’s time by +6 hours so the merged axis is [0h, 6h]
+        #  Also shift the absolute datetime to remain consistent with the new lead-times.
         shift = np.timedelta64(6, "h")
         ds_b = ds_b.assign_coords(time=ds_b.time + shift)
+        if "datetime" in ds_b.coords:
+            # datetime is 2D [batch, time]; add the same shift along time
+            dt_b = ds_b["datetime"].values
+            ds_b = ds_b.assign_coords(datetime=(
+                ("batch", "time"), (dt_b.astype("datetime64[ns]") + shift)
+            ))
 
         merged = xr.concat([ds_a, ds_b], dim="time").sortby("time")
 
@@ -371,6 +378,19 @@ class DataProcessor:
         # Strictly increasing time
         tvals = merged.time.values
         assert (tvals[1:] - tvals[:-1] > np.timedelta64(0, 'ns')).all()
+
+        # Rebuild a clean 2D datetime grid from the earliest absolute timestamp
+        # so downstream reindexing in run_graphcast.py can extend it deterministically
+        # without producing NaT values.
+        # Assumes regular 6-hourly cadence, which is true for GFS/GraphCast inputs.
+        start_dt = pd.Timestamp(merged["datetime"].values[0, 0])
+        ntime = merged.sizes["time"]
+        step = pd.to_timedelta(np.arange(ntime) * 6, unit="h").values.astype("timedelta64[ns]")
+        dt_1d = (start_dt.to_datetime64() + step).astype("datetime64[ns]")
+        # Broadcast to [batch, time]
+        nbatch = merged.sizes.get("batch", 1)
+        dt_2d = np.broadcast_to(dt_1d, (nbatch, ntime))
+        merged = merged.assign_coords(datetime=(("batch", "time"), dt_2d))
 
         merged_dir = os.path.join(self.output_directory, "merged_forecasts")
         os.makedirs(merged_dir, exist_ok=True)
@@ -438,4 +458,3 @@ if __name__ == "__main__":
     data_processor = DataProcessor(download_date, forecast_run, output_directory, download_directory, download_pairs)
     
     data_processor.start()
-
