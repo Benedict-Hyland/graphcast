@@ -27,6 +27,8 @@ import pandas as pd
 
 # https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20250910/18/atmos/gfs.t18z.pgrb2.0p25.f000
 
+print("\nUsing latest GDAS utility script\n")
+
 class DataProcessor:
     def __init__(self, forecast_day, forecast_run, output_directory=None, download_directory=None, download_pairs=True):
         self.forecast_day = forecast_day
@@ -226,7 +228,7 @@ class DataProcessor:
             combine_attrs="drop_conflicts",
             join="outer",
             compat="override"
-        ).sort_by("time")
+        ).sortby("time")
 
         # ds = xr.combine_by_coords(
         #     extracted_datasets,
