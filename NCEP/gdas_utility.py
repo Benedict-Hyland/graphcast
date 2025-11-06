@@ -370,7 +370,15 @@ class DataProcessor:
                 ("batch", "time"), (dt_b.astype("datetime64[ns]") + shift)
             ))
 
-        merged = xr.concat([ds_a, ds_b], dim="time").sortby("time")
+        # Explicit concat options to be forward-compatible with xarray defaults
+        merged = xr.concat(
+            [ds_a, ds_b],
+            dim="time",
+            data_vars="all",      # include all data variables
+            coords="minimal",     # only concatenate along the time coord
+            compat="no_conflicts",# allow identical-or-missing metadata
+            join="outer",         # default for concat; explicit to avoid warnings
+        ).sortby("time")
 
         # Final sanity checks
         assert str(merged.time.dtype).startswith("timedelta64")
@@ -393,6 +401,12 @@ class DataProcessor:
         nbatch = merged.sizes.get("batch", 1)
         dt_2d = np.broadcast_to(dt_1d, (nbatch, ntime))
         merged = merged.assign_coords(datetime=(("batch", "time"), dt_2d))
+
+        # Ensure time encoding uses hours to avoid timedelta 'days' warning on write
+        try:
+            merged["time"].encoding.update({"units": "hours"})
+        except Exception:
+            pass
 
         merged_dir = os.path.join(self.output_directory, "merged_forecasts")
         os.makedirs(merged_dir, exist_ok=True)
