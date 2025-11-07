@@ -271,6 +271,23 @@ class GraphCastModel:
             except Exception as e:
                 print(f"Error removing input and forecast data: {str(e)}")
 
+    def fix_task_config_for_gdas(self):
+        """Remove variables from task_config that aren't in GDAS data."""
+        available_vars = set(self.current_batch.data_vars)
+
+        # Filter target_variables to only include what is in the data
+        filtered_targets = tuple(
+            var for var in self.task_config.target_variables
+            if var in available_vars or any(var in str(self.current_batch[dv]) for dv in available_vars)
+        )
+
+        # Create new task_config with filtered variables
+        self.task_config = dataclasses.replace(
+            self.task_config,
+            target_variables=filtered_targets
+        )
+        print(f"Filtered target variables: removed {set(self.task_config.target_variables) - set(filtered_targets)}")
+        
 
 
 if __name__ == "__main__":
@@ -289,6 +306,7 @@ if __name__ == "__main__":
     
     runner.load_pretrained_model()
     runner.load_gdas_data()
+    runner.fix_task_config_for_gdas()
     runner.extract_inputs_targets_forcings()
     runner.load_normalization_stats()
     runner.get_predictions()
