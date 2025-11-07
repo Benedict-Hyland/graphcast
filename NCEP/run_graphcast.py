@@ -272,21 +272,44 @@ class GraphCastModel:
                 print(f"Error removing input and forecast data: {str(e)}")
 
     def fix_task_config_for_gdas(self):
-        """Remove variables from task_config that aren't in GDAS data."""
+        """Adjust task_config to match GDAS data structure."""
         available_vars = set(self.current_batch.data_vars)
 
-        # Filter target_variables to only include what is in the data
+        # 1. Filter target_variables to only what exists in data
         filtered_targets = tuple(
             var for var in self.task_config.target_variables
-            if var in available_vars or any(var in str(self.current_batch[dv]) for dv in available_vars)
+            if var in available_vars
         )
 
-        # Create new task_config with filtered variables
+        # 2. Detect time-dependent input variables
+        time_dependent_vars = {
+            var for var in self.current_batch.data_vars
+            if 'time' in self.current_batch[var].dims
+        }
+
+        # 3. Find input vars that are time-dependent but not in targets/forcings
+        problematic_vars = (
+            time_dependent_vars
+            & set(self.task_config.input_variables)
+            - set(filtered_targets)
+            - set(self.task_config.forcing_variables)
+        )
+
+        # 4. Add them to forcing_variables
+        updated_forcing = tuple(set(self.task_config.forcing_variables) | problematic_vars)
+
+        # 5. Update task_config
         self.task_config = dataclasses.replace(
             self.task_config,
-            target_variables=filtered_targets
+            target_variables=filtered_targets,
+            forcing_variables=updated_forcing
         )
-        print(f"Filtered target variables: removed {set(self.task_config.target_variables) - set(filtered_targets)}")
+
+        if problematic_vars:
+            print(f"Added to forcing variables: {problematic_vars}")
+        removed_targets = set(self.task_config.target_variables) - set(filtered_targets)
+        if removed_targets:
+            print(f"Removed from target variables: {removed_targets}")
         
 
 
